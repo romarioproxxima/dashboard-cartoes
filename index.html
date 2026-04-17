@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard Financeiro de Cartões</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220;
+    --bg-soft:#111a2e;
+    --panel:#162238;
+    --panel-2:#1b2942;
+    --border:#23324e;
+    --muted:#8aa0c3;
+    --text:#e7eefc;
+    --brand:#5b8def;
+    --brand-2:#22c1dc;
+    --accent:#a78bfa;
+    --good:#22c55e;
+    --warn:#f59e0b;
+    --bad:#ef4444;
+    --santander:#ea1d25;
+    --credcard:#16a34a;
+    --shadow: 0 10px 30px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:radial-gradient(1200px 600px at 20% -10%,#1c2a4a 0%,transparent 60%),radial-gradient(1000px 500px at 90% 10%,#1d2b4d 0%,transparent 60%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+  .wrap{max-width:1440px;margin:0 auto;padding:24px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;gap:14px;align-items:center}
+  .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--accent));display:grid;place-items:center;box-shadow:var(--shadow)}
+  .logo svg{width:26px;height:26px;color:#fff}
+  h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{display:inline-flex;gap:8px;align-items:center;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s ease;text-decoration:none}
+  .btn:hover{background:var(--panel-2);border-color:#2e456c}
+  .btn.primary{background:linear-gradient(135deg,var(--brand),var(--accent));border:none;box-shadow:0 6px 20px rgba(91,141,239,.35)}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn svg{width:14px;height:14px}
+  .pill{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block;margin-right:6px;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+
+  .filters{display:grid;grid-template-columns:1.2fr 1fr 1fr .9fr .9fr 1fr;gap:12px;margin-bottom:20px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+  .filter label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+  .filter select,.filter input{width:100%;background:var(--bg-soft);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 10px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+  .filter select:focus,.filter input:focus{border-color:var(--brand)}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--brand),var(--accent))}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:8px}
+  .kpi .val{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  .kpi .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .kpi.good::before{background:linear-gradient(180deg,#22c55e,#10b981)}
+  .kpi.warn::before{background:linear-gradient(180deg,#f59e0b,#ef4444)}
+  .kpi.info::before{background:linear-gradient(180deg,#22c1dc,#5b8def)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);min-height:360px;display:flex;flex-direction:column}
+  .card h3{margin:0 0 2px 0;font-size:15px;font-weight:700}
+  .card .desc{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .card .chart-holder{flex:1;position:relative;min-height:290px}
+  .card.full{grid-column:1 / -1}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-top:8px}
+  .legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{text-align:left;color:var(--muted);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+  tbody td{padding:10px 8px;border-bottom:1px solid #1e2c46}
+  tbody tr:hover{background:rgba(91,141,239,.06)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .tag.santander{background:rgba(234,29,37,.15);color:#ff6b72;border:1px solid rgba(234,29,37,.35)}
+  .tag.credcard{background:rgba(22,163,74,.15);color:#4ade80;border:1px solid rgba(22,163,74,.35)}
+  .tag.gen{background:rgba(139,139,139,.15);color:#cbd5e1;border:1px solid rgba(139,139,139,.35)}
+
+  .scroll{overflow:auto;max-height:420px;border-radius:10px}
+
+  /* Parcelas a Pagar — hierarquia */
+  .parc-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .btn.small{padding:5px 10px;font-size:11.5px}
+  .pill.small{font-size:11.5px;padding:5px 10px}
+  .parc-list{display:flex;flex-direction:column;gap:10px}
+  .person{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .person > summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;user-select:none;transition:background .15s}
+  .person > summary:hover{background:rgba(91,141,239,.08)}
+  .person > summary::-webkit-details-marker{display:none}
+  .person > summary .chev{transition:transform .2s}
+  .person[open] > summary .chev{transform:rotate(90deg)}
+  .person-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14.5px}
+  .person-title .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent));display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff;flex:0 0 auto}
+  .person-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .person-total{font-weight:700;font-size:15px;color:var(--warn)}
+  .person-sub{color:var(--muted);font-size:12px}
+  .person-body{border-top:1px solid var(--border);padding:6px 16px 14px}
+  .card-group{margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .card-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,.02);font-size:12.5px}
+  .card-hdr strong{font-weight:700}
+  .card-hdr .ct-total{font-variant-numeric:tabular-nums;font-weight:700}
+  .card-group table{margin:0}
+  .card-group table thead th{background:rgba(0,0,0,.15)}
+  .parc-num{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(91,141,239,.18);border:1px solid rgba(91,141,239,.35);font-weight:700;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .parc-num.paid{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.35);color:#86efac}
+  .parc-num.current{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.35);color:#fde68a}
+  .mes-fatura{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);font-size:11.5px;font-weight:600;color:#ddd6fe}
+  .loja-sub{color:var(--muted);font-size:11px;margin-top:2px}
+  .empty-state{text-align:center;color:var(--muted);padding:30px;font-size:13.5px}
+
+  footer{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+
+  /* Loading & Error overlays */
+  .overlay{position:fixed;inset:0;background:rgba(6,10,20,.85);display:none;place-items:center;z-index:50;backdrop-filter:blur(4px)}
+  .overlay.show{display:grid}
+  .loader{border:3px solid rgba(255,255,255,.15);border-top-color:var(--brand);border-radius:50%;width:44px;height:44px;animation:spin 1s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loader-box{text-align:center;padding:26px 30px;background:var(--panel);border-radius:14px;border:1px solid var(--border);min-width:280px}
+  .err-box{max-width:520px;background:var(--panel);border:1px solid #5b2121;border-left:4px solid var(--bad);border-radius:14px;padding:22px}
+  .err-box h4{margin:0 0 10px 0}
+  .err-box code{background:#0b1220;padding:2px 6px;border-radius:4px;font-size:12px;color:#ffb3b3}
+  .err-box .btn{margin-top:12px}
+
+  @media (max-width:1100px){
+    .filters{grid-template-columns:repeat(2,1fr)}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:1fr}
+  }
+  @media (max-width:640px){
+    .filters{grid-template-columns:1fr}
+    .kpis{grid-template-columns:1fr}
+    .tools{width:100%;justify-content:flex-start}
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#223257;border-radius:10px}
+  ::-webkit-scrollbar-thumb:hover{background:#2d4171}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+      <div>
+        <h1>Dashboard Financeiro de Cartões</h1>
+        <div class="sub">PLANILHA DE CARTÕES · Conectado em tempo real</div>
+      </div>
+    </div>
+    <div class="tools">
+      <span class="pill" id="status"><span class="status-dot"></span><span id="statusText">Carregando…</span></span>
+      <span class="pill" id="lastUpdate">—</span>
+      <button class="btn" id="openSheet" title="Abrir planilha">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Abrir planilha
+      </button>
+      <button class="btn primary" id="refresh" title="Atualizar dados">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+        Atualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- FILTROS -->
+  <div class="filters">
+    <div class="filter">
+      <label>Período</label>
+      <select id="fPeriodo">
+        <option value="all">Tudo</option>
+        <option value="thisYear">Este ano</option>
+        <option value="last12">Últimos 12 meses</option>
+        <option value="last6">Últimos 6 meses</option>
+        <option value="last3">Últimos 3 meses</option>
+        <option value="last30">Últimos 30 dias</option>
+      </select>
+    </div>
+    <div class="filter"><label>Cartão</label><select id="fCartao"><option value="all">Todos</option></select></div>
+    <div class="filter"><label>Responsável</label><select id="fResp"><option value="all">Todos</option></select></div>
+    <div class="filter"><label>Vencimento (dia)</label><select id="fVenc"><option value="all">Todos</option></select></div>
+    <div class="filter"><label>Mês fatura</label><select id="fMes"><option value="all">Todos</option></select></div>
+    <div class="filter"><label>Modo análise</label>
+      <select id="fModo">
+        <option value="compra">Por data da compra</option>
+        <option value="parcela">Por fatura (parcelas)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi info"><div class="lbl">Total no período</div><div class="val" id="kTotal">R$ 0,00</div><div class="hint" id="kTotalHint">— lançamentos</div></div>
+    <div class="kpi"><div class="lbl">Fatura deste mês</div><div class="val" id="kFatura">R$ 0,00</div><div class="hint" id="kFaturaHint">—</div></div>
+    <div class="kpi warn"><div class="lbl">A pagar neste mês</div><div class="val" id="kAbertoMes">R$ 0,00</div><div class="hint" id="kAbertoMesHint">— em aberto</div></div>
+    <div class="kpi good"><div class="lbl">Maior responsável</div><div class="val" id="kTop">—</div><div class="hint" id="kTopHint">—</div></div>
+    <div class="kpi warn"><div class="lbl">Parcelas futuras</div><div class="val" id="kFuturas">R$ 0,00</div><div class="hint" id="kFuturasHint">— a vencer</div></div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="grid">
+    <div class="card">
+      <h3>Total por Cartão</h3>
+      <div class="desc">Soma de gastos por cartão no período selecionado</div>
+      <div class="chart-holder"><canvas id="chCartao"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h3>Valor por Responsável</h3>
+      <div class="desc">Empilhado por cartão — clique na legenda para filtrar</div>
+      <div class="chart-holder"><canvas id="chResp"></canvas></div>
+    </div>
+
+    <div class="card full">
+      <h3>Acumulado Mensal por Responsável</h3>
+      <div class="desc">Curva acumulada ao longo dos meses (reinicia por responsável)</div>
+      <div class="chart-holder"><canvas id="chAcum"></canvas></div>
+    </div>
+
+    <div class="card full">
+      <h3>Projeção de Parcelas Futuras</h3>
+      <div class="desc">Distribuição das parcelas ainda a vencer — empilhado por cartão</div>
+      <div class="chart-holder"><canvas id="chFuturas"></canvas></div>
+    </div>
+
+    <div class="card full">
+      <h3>Parcelas a Pagar — Por Responsável</h3>
+      <div class="desc">Tudo que ainda vai cair nas próximas faturas, agrupado por pessoa → cartão → compra. Clique em cada nome para expandir/recolher.</div>
+      <div class="parc-toolbar">
+        <button class="btn small" id="btnExpandAll">Expandir todos</button>
+        <button class="btn small" id="btnCollapseAll">Recolher todos</button>
+        <span class="pill small" id="parcSummary">—</span>
+      </div>
+      <div id="parcDetalhe" class="parc-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div>Fonte: <span id="fonteInfo">—</span></div>
+    <div>Feito para Romário · Cache anônimo do Google ~5 min. Clique em <b>Atualizar</b> para forçar refresh.</div>
+  </footer>
+</div>
+
+<div class="overlay" id="loader">
+  <div class="loader-box">
+    <div class="loader"></div>
+    <div><b>Carregando planilha…</b></div>
+    <div style="color:var(--muted);font-size:12px;margin-top:6px">Lendo aba Despesas via Google Sheets</div>
+  </div>
+</div>
+
+<div class="overlay" id="errorOv">
+  <div class="err-box">
+    <h4 style="color:#ffb3b3">Não consegui ler a planilha</h4>
+    <div id="errMsg" style="color:var(--muted);font-size:13.5px;line-height:1.55"></div>
+    <div style="margin-top:14px;font-size:13px">
+      <b>Soluções rápidas:</b>
+      <ol style="margin:8px 0 0 18px;color:var(--muted);line-height:1.8">
+        <li>Abra a planilha → <b>Compartilhar</b> → <b>Acesso geral</b>: "Qualquer pessoa com o link (Leitor)".</li>
+        <li>Confirme que existe uma aba chamada exatamente <code>Despesas</code> (sem acento extra).</li>
+        <li>Clique em <b>Atualizar</b> abaixo.</li>
+      </ol>
+    </div>
+    <button class="btn primary" onclick="location.reload()" style="margin-top:14px">Tentar novamente</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO
+   ========================================================= */
+const SHEET_ID  = '1tl1d78Z3QDMA_IfEc-bLGqBI0yaF5raQwrRRFdbMvtc';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
+// Aba oficial da planilha. Estrutura pivot: 1 linha por compra, pares
+// (Parcela / Status) por mês a partir da coluna J.
+const SHEET_TABS = ['Despesas'];
+
+// Mapa fixo da aba "Despesas" — 0-indexed (A=0, B=1, ...).
+const DESP_COL = {
+  compra: 1, loja: 2, cartao: 3, venc: 4, resp: 5,
+  data: 6, valor: 7, parc: 8,
+  firstParcCol: 9      // col J — Parcela do 1º mês (Nov/2025)
+};
+// Primeiro mês coberto pelas colunas de parcela:
+const DESP_START_YEAR  = 2025;
+const DESP_START_MONTH = 10;   // 0-indexed → Novembro
+const DESP_N_MONTHS    = 14;   // Nov/2025 → Dez/2026
+// A planilha cobre 14 meses; a 1ª linha de dados é a linha 4 (row 3 zero-based).
+const DESP_DATA_START  = 3;
+
+// Fechamento estimado: dias ANTES do vencimento em que o cartão fecha a fatura
+const CLOSING_OFFSET = 7;
+
+/* =========================================================
+   UTILITÁRIOS
+   ========================================================= */
+const fmtBRL = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fmtInt = v => (v||0).toLocaleString('pt-BR');
+const pad2 = n => String(n).padStart(2,'0');
+const monthKey = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+const monthLabel = k => {
+  const [y,m] = k.split('-').map(Number);
+  const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${meses[m-1]}/${String(y).slice(2)}`;
+};
+const hash = s => {let h=0;for(const c of String(s||'')){h=(h<<5)-h+c.charCodeAt(0);h|=0}return Math.abs(h)};
+
+// Paleta base + cores por cartão
+const PALETTE = ['#5b8def','#a78bfa','#22c1dc','#f472b6','#fbbf24','#4ade80','#f97316','#60a5fa','#c084fc','#2dd4bf','#fb7185','#eab308','#34d399','#a3a3a3'];
+const CARD_COLORS = {
+  'Santander': '#ea1d25',
+  'Cred Card': '#16a34a',
+  'Credcard':  '#16a34a'
+};
+const colorFor = (key, i=0) => CARD_COLORS[key] || PALETTE[hash(key+i) % PALETTE.length];
+
+/* =========================================================
+   LEITURA DO GOOGLE SHEETS (endpoint gviz/JSON)
+   ========================================================= */
+// Usa JSONP (script tag) em vez de fetch — funciona em file:// onde CORS
+// bloquearia uma chamada XHR direta ao docs.google.com.
+function fetchSheet(sheetId, tab){
+  return new Promise((resolve, reject) => {
+    const cbName = '__gvizCb_' + Math.random().toString(36).slice(2);
+    let done = false, script;
+    const cleanup = () => {
+      try { delete window[cbName]; } catch(e) { window[cbName] = undefined; }
+      if(script && script.parentNode) script.parentNode.removeChild(script);
+    };
+    window[cbName] = (data) => {
+      done = true; cleanup();
+      if(!data || data.status === 'error') return reject(new Error('sheet_not_found'));
+      resolve(data.table);
+    };
+    // NÃO usa &headers=1 porque a aba "Despesas" tem 3 linhas de metadados no topo
+    // (totais, nomes de meses, cabeçalho de colunas) — tratamos isso manualmente.
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`
+      + `?tqx=out:json;responseHandler:${cbName}`
+      + `&sheet=${encodeURIComponent(tab)}`
+      + `&_ts=${Date.now()}`;
+    script = document.createElement('script');
+    script.src = url;
+    script.onerror = () => { if(!done){ cleanup(); reject(new Error('Falha de rede ou planilha sem acesso público')); } };
+    document.head.appendChild(script);
+    setTimeout(() => { if(!done){ cleanup(); reject(new Error('Timeout (15s)')); } }, 15000);
+  });
+}
+
+function parseDateGviz(v){
+  // gviz Date() can come as "Date(2025,9,26)" or as a real Date-like object
+  if(!v) return null;
+  if(typeof v === 'string'){
+    const m = v.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+    if(m){ return new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0)); }
+    // fallback: try Date.parse of d/m/y
+    const p = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(p) return new Date(+p[3], +p[2]-1, +p[1]);
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
+  if(v instanceof Date) return v;
+  return null;
+}
+
+function normalizeHeader(s){
+  return String(s||'').trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // strip accents
+}
+
+/*  Lê uma linha de dados da aba Despesas (estrutura pivot).
+    Retorna { compra, loja, cartao, venc, resp, data, valor, parc, parcelas[] }
+    onde parcelas[] já vem com { n, total, mesFatura, mesFaturaKey, valorParcela, status, paga }. */
+function rowsFromTable(table){
+  const rows = table.rows || [];
+  const out = [];
+  for(let r = DESP_DATA_START; r < rows.length; r++){
+    const c = (rows[r].c || []);
+    const cell = i => c[i] ? (c[i].v !== undefined ? c[i].v : null) : null;
+
+    const compra = cell(DESP_COL.compra);
+    const loja   = cell(DESP_COL.loja);
+    const cartao = String(cell(DESP_COL.cartao) || '').trim();
+    const venc   = Number(cell(DESP_COL.venc)) || 1;
+    const resp   = String(cell(DESP_COL.resp) || '').trim();
+    const data   = parseDateGviz(cell(DESP_COL.data));
+    const valor  = Number(cell(DESP_COL.valor));
+    const parc   = Math.max(1, Math.floor(Number(cell(DESP_COL.parc))||1));
+    if(!data || isNaN(valor) || !cartao || !resp) continue;
+
+    // Lê a matriz de parcelas por mês
+    const valorFallback = Math.round((valor / parc) * 100) / 100;
+    const parcelas = [];
+    for(let k = 0; k < DESP_N_MONTHS; k++){
+      const cValor  = DESP_COL.firstParcCol + 2*k;
+      const cStatus = cValor + 1;
+      const vNum    = Number(cell(cValor));
+      const sStr    = String(cell(cStatus) || '').trim();
+      const temValor  = !isNaN(vNum) && vNum > 0;
+      const temStatus = sStr !== '';
+      if(!temValor && !temStatus) continue;
+      const mes = new Date(DESP_START_YEAR, DESP_START_MONTH + k, venc);
+      // Quando marcada como Pago, a célula vem com R$ 0,00 (fórmula da planilha
+      // "zera" o saldo após pagamento). Usamos o fallback (valor/parc) para preservar
+      // o valor nominal histórico em KPIs como "Total no período" e "Fatura deste mês".
+      const valorReal = (temValor && vNum > 0) ? vNum : valorFallback;
+      parcelas.push({
+        mesFatura: mes,
+        mesFaturaKey: monthKey(mes),
+        valorParcela: valorReal,
+        status: sStr,
+        paga: sStr.toLowerCase() === 'pago'
+      });
+    }
+    // Ordena por mês e numera
+    parcelas.sort((a,b) => a.mesFatura - b.mesFatura);
+    parcelas.forEach((p,i) => { p.n = i+1; p.total = parcelas.length || parc; });
+
+    out.push({compra, loja, cartao, venc, resp, data, valor, parc, parcelas});
+  }
+  return out;
+}
+
+/* =========================================================
+   GERADOR DE PARCELAS (uma linha por parcela)
+   ========================================================= */
+function explodeParcelas(rows){
+  const out = [];
+  for(const r of rows){
+    // Se a compra não tem nenhuma parcela marcada na pivot, usa o fallback
+    // (data da compra + offset de fechamento) só pra não sumir da visão.
+    if(!r.parcelas || !r.parcelas.length){
+      const valorP = Math.round((r.valor / r.parc) * 100) / 100;
+      const offsetInicial = (r.data.getDate() < (r.venc - CLOSING_OFFSET)) ? 0 : 1;
+      for(let p = 0; p < r.parc; p++){
+        const m = new Date(r.data.getFullYear(), r.data.getMonth()+offsetInicial+p, r.venc);
+        out.push({...r, n:p+1, total:r.parc, valorParcela:valorP, status:'', paga:false, mesFatura:m, mesFaturaKey:monthKey(m)});
+      }
+      continue;
+    }
+    for(const p of r.parcelas){
+      out.push({...r, ...p});
+    }
+  }
+  return out;
+}
+
+/* =========================================================
+   FILTROS
+   ========================================================= */
+const STATE = {
+  rows: [],
+  parcelas: [],
+  filters: {periodo:'all', cartao:'all', resp:'all', venc:'all', mes:'all', modo:'compra'}
+};
+
+function periodBounds(pk){
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59);
+  let start = null;
+  switch(pk){
+    case 'thisYear': start = new Date(now.getFullYear(),0,1); break;
+    case 'last12':   start = new Date(now.getFullYear(), now.getMonth()-11, 1); break;
+    case 'last6':    start = new Date(now.getFullYear(), now.getMonth()-5, 1);  break;
+    case 'last3':    start = new Date(now.getFullYear(), now.getMonth()-2, 1);  break;
+    case 'last30':   start = new Date(now.getTime() - 30*24*3600*1000); break;
+    default: return [null, null];
+  }
+  return [start, end];
+}
+
+function applyFilters(){
+  const f = STATE.filters;
+  const [start, end] = periodBounds(f.periodo);
+  const byDate = (d) => (!start||d>=start) && (!end||d<=end);
+
+  // Base depende do modo
+  const base = (f.modo === 'parcela') ? STATE.parcelas : STATE.rows;
+  // Conjunto de compras (chave data+loja+compra+valor) que têm alguma parcela no mês selecionado
+  const comprasComParcelaNoMes = new Set();
+  if(f.modo !== 'parcela' && f.mes !== 'all'){
+    for(const p of STATE.parcelas){
+      if(p.mesFaturaKey === f.mes) comprasComParcelaNoMes.add(`${p.compra}|${p.loja}|${p.data.getTime()}|${p.valor}|${p.resp}`);
+    }
+  }
+  return base.filter(r => {
+    const d = (f.modo === 'parcela') ? r.mesFatura : r.data;
+    if(!byDate(d)) return false;
+    if(f.cartao !== 'all' && r.cartao !== f.cartao) return false;
+    if(f.resp   !== 'all' && r.resp   !== f.resp)   return false;
+    if(f.venc   !== 'all' && Number(r.venc) !== Number(f.venc)) return false;
+    if(f.mes !== 'all'){
+      if(f.modo === 'parcela'){
+        if(r.mesFaturaKey !== f.mes) return false;
+      } else {
+        if(!comprasComParcelaNoMes.has(`${r.compra}|${r.loja}|${r.data.getTime()}|${r.valor}|${r.resp}`)) return false;
+      }
+    }
+    return true;
+  });
+}
+
+/* =========================================================
+   RENDER: OPÇÕES DE FILTRO
+   ========================================================= */
+function populateFilters(rows){
+  const fill = (id, values) => {
+    const el = document.getElementById(id);
+    const current = el.value;
+    el.innerHTML = '<option value="all">Todos</option>' + values.map(v=>`<option value="${v}">${v}</option>`).join('');
+    if(values.includes(current)) el.value = current;
+  };
+  fill('fCartao', [...new Set(rows.map(r=>r.cartao))].sort());
+  fill('fResp',   [...new Set(rows.map(r=>r.resp))].sort());
+  fill('fVenc',   [...new Set(rows.map(r=>r.venc))].sort((a,b)=>a-b).map(String));
+
+  // Meses disponíveis = todos os mesFaturaKey únicos nas parcelas, em ordem cronológica
+  const mesesKeys = [...new Set(STATE.parcelas.map(p => p.mesFaturaKey))].sort();
+  const elMes = document.getElementById('fMes');
+  if(elMes){
+    const cur = elMes.value;
+    elMes.innerHTML = '<option value="all">Todos</option>'
+      + mesesKeys.map(k => `<option value="${k}">${monthLabel(k)}</option>`).join('');
+    if(mesesKeys.includes(cur)) elMes.value = cur;
+  }
+}
+
+/* =========================================================
+   CHART.JS DEFAULTS
+   ========================================================= */
+Chart.defaults.color = '#c8d3ea';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.borderColor = 'rgba(255,255,255,.06)';
+const gridStyle = { color: 'rgba(255,255,255,.06)', drawBorder:false };
+
+// Registra o plugin datalabels e desliga por padrão — só habilitamos nos charts
+// em que queremos mostrar o valor (Total por Cartão e Valor por Responsável).
+if(window.ChartDataLabels){
+  Chart.register(window.ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { display: false });
+}
+
+const charts = {};
+function makeOrUpdate(name, ctx, config){
+  if(charts[name]){ charts[name].data = config.data; charts[name].options = config.options; charts[name].update(); return; }
+  charts[name] = new Chart(ctx, config);
+}
+
+/* =========================================================
+   RENDER: KPIs + GRÁFICOS + TABELA
+   ========================================================= */
+function render(){
+  const data = applyFilters();
+  const modo = STATE.filters.modo;
+  const valueOf = r => modo === 'parcela' ? r.valorParcela : r.valor;
+
+  // KPIs
+  const total = data.reduce((s,r)=>s+valueOf(r), 0);
+  document.getElementById('kTotal').textContent = fmtBRL(total);
+  document.getElementById('kTotalHint').textContent = `${data.length} ${modo==='parcela'?'parcelas':'lançamentos'}`;
+
+  // Fatura (mês atual ou mês selecionado no filtro) — total, pago e em aberto
+  const nowKey = monthKey(new Date());
+  // Se o usuário escolheu um mês específico, usamos ele; senão, mês atual
+  const mesKey = (STATE.filters.mes !== 'all') ? STATE.filters.mes : nowKey;
+  const parcMes = STATE.parcelas.filter(p => p.mesFaturaKey === mesKey
+      && (STATE.filters.cartao==='all' || p.cartao===STATE.filters.cartao)
+      && (STATE.filters.resp==='all'   || p.resp===STATE.filters.resp)
+      && (STATE.filters.venc==='all'   || Number(p.venc)===Number(STATE.filters.venc)));
+  const totalMes  = parcMes.reduce((s,r)=>s+r.valorParcela,0);
+  const pagoMes   = parcMes.filter(p=>p.paga).reduce((s,r)=>s+r.valorParcela,0);
+  const abertoMes = parcMes.filter(p=>!p.paga).reduce((s,r)=>s+r.valorParcela,0);
+  const nPagasMes = parcMes.filter(p=>p.paga).length;
+  const nAbertoMes = parcMes.filter(p=>!p.paga).length;
+  document.getElementById('kFatura').textContent = fmtBRL(totalMes);
+  document.getElementById('kFaturaHint').textContent =
+    `${monthLabel(mesKey)} · ${fmtBRL(pagoMes)} pago`;
+  document.getElementById('kAbertoMes').textContent = fmtBRL(abertoMes);
+  document.getElementById('kAbertoMesHint').textContent =
+    `${monthLabel(mesKey)} · ${nAbertoMes} parcela${nAbertoMes!==1?'s':''} em aberto`
+    + (nPagasMes ? ` · ${nPagasMes} paga${nPagasMes!==1?'s':''}` : '');
+
+  // Maior responsável (no conjunto filtrado)
+  const byResp = {};
+  for(const r of data){ byResp[r.resp] = (byResp[r.resp]||0) + valueOf(r); }
+  const topEntry = Object.entries(byResp).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('kTop').textContent = topEntry ? topEntry[0] : '—';
+  document.getElementById('kTopHint').textContent = topEntry ? fmtBRL(topEntry[1]) : '—';
+
+  // Parcelas futuras: não pagas e que caem a partir do mês atual inclusive.
+  // Se o filtro "Mês fatura" estiver setado, restringe àquele mês específico.
+  const now = new Date();
+  const futuras = STATE.parcelas.filter(p => !p.paga
+    && p.mesFatura >= new Date(now.getFullYear(), now.getMonth(), 1)
+    && (STATE.filters.cartao==='all' || p.cartao===STATE.filters.cartao)
+    && (STATE.filters.resp==='all'   || p.resp===STATE.filters.resp)
+    && (STATE.filters.venc==='all'   || Number(p.venc)===Number(STATE.filters.venc))
+    && (STATE.filters.mes==='all'    || p.mesFaturaKey===STATE.filters.mes)
+  );
+  const totFuturas = futuras.reduce((s,r)=>s+r.valorParcela,0);
+  document.getElementById('kFuturas').textContent = fmtBRL(totFuturas);
+  const mesesFuturos = new Set(futuras.map(p=>p.mesFaturaKey)).size;
+  document.getElementById('kFuturasHint').textContent = `${futuras.length} parcelas · ${mesesFuturos} meses`;
+
+  // ============ Gráfico 1: Total por cartão ============
+  const byCartao = {};
+  for(const r of data){ byCartao[r.cartao] = (byCartao[r.cartao]||0) + valueOf(r); }
+  const cartaoLabels = Object.keys(byCartao).sort((a,b)=>byCartao[b]-byCartao[a]);
+  const cartaoData   = cartaoLabels.map(k=>byCartao[k]);
+  const cartaoMax = Math.max(0, ...cartaoData);
+  makeOrUpdate('chCartao', document.getElementById('chCartao'), {
+    type:'bar',
+    data:{ labels:cartaoLabels, datasets:[{ label:'Total', data:cartaoData, backgroundColor:cartaoLabels.map(c=>colorFor(c)), borderRadius:8, borderSkipped:false, maxBarThickness:48 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ right: 90 } },
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx => fmtBRL(ctx.parsed.x) } },
+        datalabels:{
+          display:true,
+          anchor:'end',
+          align:'end',
+          clamp:true,
+          clip:false,
+          color:'#e6edf7',
+          font:{ weight:'600', size:11 },
+          formatter:v => fmtBRL(v)
+        }
+      },
+      scales:{
+        x:{ grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$\u00a0','R$ ') }, suggestedMax: cartaoMax*1.15 },
+        y:{ grid:{display:false} }
+      }
+    }
+  });
+
+  // ============ Gráfico 2: Valor por responsável (stacked by cartão) ============
+  const respSet = [...new Set(data.map(r=>r.resp))];
+  const cartaoSet = [...new Set(data.map(r=>r.cartao))];
+  const respByCartao = {};
+  for(const r of respSet){ respByCartao[r] = {}; for(const c of cartaoSet){ respByCartao[r][c] = 0; } }
+  for(const r of data){ respByCartao[r.resp][r.cartao] += valueOf(r); }
+  // ordena responsáveis por total desc
+  respSet.sort((a,b) => Object.values(respByCartao[b]).reduce((s,v)=>s+v,0) - Object.values(respByCartao[a]).reduce((s,v)=>s+v,0));
+  const respLabels = respSet;
+  const respDatasets = cartaoSet.map((c, i) => ({
+    label: c,
+    data: respLabels.map(r => respByCartao[r][c] || 0),
+    backgroundColor: colorFor(c,i),
+    borderRadius: 6,
+    borderSkipped: false,
+    maxBarThickness: 30
+  }));
+  const respTotals = respLabels.map(r => Object.values(respByCartao[r]).reduce((s,v)=>s+v,0));
+  const respMax = Math.max(0, ...respTotals);
+  const lastDsIdx = respDatasets.length - 1;
+  makeOrUpdate('chResp', document.getElementById('chResp'), {
+    type:'bar',
+    data:{ labels:respLabels, datasets:respDatasets },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ right: 110 } },
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.x)}` } },
+        datalabels:{
+          display: ctx => ctx.datasetIndex === lastDsIdx,
+          anchor:'end',
+          align:'end',
+          clamp:true,
+          clip:false,
+          color:'#e6edf7',
+          font:{ weight:'700', size:11 },
+          formatter: (v, ctx) => fmtBRL(respTotals[ctx.dataIndex])
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$\u00a0','R$ ') }, suggestedMax: respMax*1.18 },
+        y:{ stacked:true, grid:{display:false} }
+      }
+    }
+  });
+
+  // ============ Gráfico 3: Acumulado mensal por responsável ============
+  // Mês dos registros: se modo=parcela usa mesFatura, senão data
+  const months = [...new Set(data.map(r => (modo==='parcela' ? r.mesFaturaKey : monthKey(r.data))))].sort();
+  const respsForAcum = [...new Set(data.map(r=>r.resp))];
+  // Ordenar por gasto total desc e limitar a 10 linhas (os demais agrupam em "Outros")
+  respsForAcum.sort((a,b)=>{
+    const sa = data.filter(r=>r.resp===a).reduce((s,r)=>s+valueOf(r),0);
+    const sb = data.filter(r=>r.resp===b).reduce((s,r)=>s+valueOf(r),0);
+    return sb - sa;
+  });
+  const topN = respsForAcum.slice(0,8);
+  const others = respsForAcum.slice(8);
+
+  const cum = {};
+  [...topN, 'Outros'].forEach(r => cum[r] = months.map(_=>0));
+
+  // somar por mês
+  const perMonth = {};
+  for(const r of data){
+    const k = modo==='parcela' ? r.mesFaturaKey : monthKey(r.data);
+    const v = valueOf(r);
+    const respKey = topN.includes(r.resp) ? r.resp : (others.length? 'Outros' : r.resp);
+    perMonth[respKey] = perMonth[respKey] || {};
+    perMonth[respKey][k] = (perMonth[respKey][k]||0) + v;
+  }
+  // acumulado
+  const respsForChart = others.length ? [...topN, 'Outros'] : topN;
+  const acumData = respsForChart.map((r, i) => {
+    let acc = 0;
+    const data = months.map(m => { acc += (perMonth[r]?.[m] || 0); return Math.round(acc*100)/100; });
+    return {
+      label: r,
+      data,
+      borderColor: colorFor(r,i),
+      backgroundColor: colorFor(r,i)+'20',
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+      tension: .25,
+      fill: false
+    };
+  });
+  makeOrUpdate('chAcum', document.getElementById('chAcum'), {
+    type:'line',
+    data:{ labels: months.map(monthLabel), datasets: acumData },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:10}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } }
+      },
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$\u00a0','R$ ') } }
+      }
+    }
+  });
+
+  // ============ Gráfico 4: Projeção de parcelas futuras ============
+  const futurasFiltro = STATE.parcelas.filter(p=>{
+    if(p.paga) return false;
+    if(p.mesFatura < new Date(now.getFullYear(), now.getMonth(), 1)) return false;
+    if(STATE.filters.cartao!=='all' && p.cartao!==STATE.filters.cartao) return false;
+    if(STATE.filters.resp!=='all'   && p.resp!==STATE.filters.resp)   return false;
+    if(STATE.filters.venc!=='all'   && Number(p.venc)!==Number(STATE.filters.venc)) return false;
+    if(STATE.filters.mes!=='all'    && p.mesFaturaKey!==STATE.filters.mes) return false;
+    return true;
+  });
+  const futurasMonths = [...new Set(futurasFiltro.map(p=>p.mesFaturaKey))].sort();
+  const futurasCartoes = [...new Set(futurasFiltro.map(p=>p.cartao))];
+  const futurasMap = {};
+  for(const c of futurasCartoes){ futurasMap[c] = futurasMonths.map(_=>0); }
+  for(const p of futurasFiltro){
+    const i = futurasMonths.indexOf(p.mesFaturaKey);
+    if(i>=0) futurasMap[p.cartao][i] += p.valorParcela;
+  }
+  const futurasDatasets = futurasCartoes.map((c,i)=>({
+    label:c, data:futurasMap[c].map(v=>Math.round(v*100)/100),
+    backgroundColor: colorFor(c,i), borderRadius: 6, borderSkipped:false, maxBarThickness: 60
+  }));
+  const futurasTotals = futurasMonths.map((_, idx) =>
+    futurasCartoes.reduce((s, c) => s + (futurasMap[c][idx] || 0), 0)
+  );
+  const futurasMax = Math.max(0, ...futurasTotals);
+  const lastFutIdx = futurasDatasets.length - 1;
+  makeOrUpdate('chFuturas', document.getElementById('chFuturas'), {
+    type:'bar',
+    data:{ labels: futurasMonths.map(monthLabel), datasets: futurasDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 24 } },
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+        datalabels:{
+          display: ctx => ctx.datasetIndex === lastFutIdx,
+          anchor:'end',
+          align:'top',
+          clamp:true,
+          clip:false,
+          color:'#e6edf7',
+          font:{ weight:'700', size:11 },
+          formatter: (v, ctx) => fmtBRL(futurasTotals[ctx.dataIndex])
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{display:false} },
+        y:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$\u00a0','R$ ') }, suggestedMax: futurasMax*1.15 }
+      }
+    }
+  });
+
+  // ============ NOVO: Parcelas a Pagar — Hierarquia Responsável → Cartão → Compra ============
+  renderParcelasDetalhe(futurasFiltro);
+}
+
+function tagClassFor(cartao){
+  const c = (cartao||'').toLowerCase();
+  if(c.includes('santander')) return 'santander';
+  if(c.includes('cred'))      return 'credcard';
+  return 'gen';
+}
+function ordinal(n){ return `${n}ª`; }
+function initials(name){
+  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return '?';
+  if(parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+}
+
+function renderParcelasDetalhe(futuras){
+  const container = document.getElementById('parcDetalhe');
+  const summary = document.getElementById('parcSummary');
+
+  if(!futuras || futuras.length === 0){
+    container.innerHTML = `<div class="empty-state">Sem parcelas futuras para o filtro atual. 🎉</div>`;
+    summary.textContent = '0 parcelas';
+    return;
+  }
+
+  // Agrupa por responsável → cartão → (lista de parcelas)
+  const byResp = {};
+  for(const p of futuras){
+    if(!byResp[p.resp]) byResp[p.resp] = { total: 0, count: 0, byCartao: {} };
+    const r = byResp[p.resp];
+    if(!r.byCartao[p.cartao]) r.byCartao[p.cartao] = { total: 0, count: 0, items: [] };
+    r.byCartao[p.cartao].total += p.valorParcela;
+    r.byCartao[p.cartao].count++;
+    r.byCartao[p.cartao].items.push(p);
+    r.total += p.valorParcela;
+    r.count++;
+  }
+
+  // Ordena responsáveis pelo total decrescente
+  const respsSorted = Object.entries(byResp).sort((a,b)=>b[1].total - a[1].total);
+
+  // Preenche summary geral
+  const totGeral = futuras.reduce((s,p)=>s+p.valorParcela,0);
+  const totParcelas = futuras.length;
+  summary.textContent = `${respsSorted.length} pessoas · ${totParcelas} parcelas · ${fmtBRL(totGeral)}`;
+
+  const nowMonth = monthKey(new Date());
+
+  container.innerHTML = respsSorted.map(([resp, data], idx) => {
+    const cartoes = Object.entries(data.byCartao).sort((a,b)=>b[1].total - a[1].total);
+    const openAttr = idx < 3 ? 'open' : ''; // primeiros 3 abertos por padrão
+
+    const cartoesHtml = cartoes.map(([cartao, c]) => {
+      const tagCls = tagClassFor(cartao);
+      // Ordena parcelas por mês de fatura e depois por data da compra
+      const items = c.items.slice().sort((a,b)=> a.mesFatura - b.mesFatura || a.data - b.data);
+      const rows = items.map(p => {
+        const isCurrent = p.mesFaturaKey === nowMonth;
+        const parcCls = isCurrent ? 'parc-num current' : 'parc-num';
+        const compraTxt = (p.compra || '(sem descrição)').toString();
+        const lojaTxt = p.loja ? `<div class="loja-sub">${p.loja}</div>` : '';
+        const dataCompraFmt = p.data ? p.data.toLocaleDateString('pt-BR') : '—';
+        return `<tr>
+          <td style="white-space:nowrap"><span class="mes-fatura">${monthLabel(p.mesFaturaKey)}</span></td>
+          <td><div style="font-weight:600">${compraTxt}</div>${lojaTxt}</td>
+          <td style="color:var(--muted);white-space:nowrap;font-size:11.5px">${dataCompraFmt}</td>
+          <td style="white-space:nowrap"><span class="${parcCls}" title="${p.n}ª de ${p.total} parcelas">${ordinal(p.n)}/${p.total}</span></td>
+          <td class="num" style="white-space:nowrap">${fmtBRL(p.valorParcela)}</td>
+        </tr>`;
+      }).join('');
+      return `
+        <div class="card-group">
+          <div class="card-hdr">
+            <div><span class="tag ${tagCls}">${cartao}</span> <span style="color:var(--muted);margin-left:6px">${c.count} parcela${c.count>1?'s':''}</span></div>
+            <div class="ct-total">${fmtBRL(c.total)}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:70px">Mês Fatura</th>
+                <th>Compra</th>
+                <th style="width:90px">Comprado em</th>
+                <th style="width:80px">Parcela</th>
+                <th class="num" style="width:110px">Valor</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }).join('');
+
+    return `
+      <details class="person" ${openAttr}>
+        <summary>
+          <div class="person-title">
+            <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+            <div class="avatar">${initials(resp)}</div>
+            <div>
+              <div>${resp}</div>
+              <div class="person-sub">${cartoes.length} cartão${cartoes.length>1?'es':''} · ${data.count} parcela${data.count>1?'s':''}</div>
+            </div>
+          </div>
+          <div class="person-meta">
+            <div class="person-total">${fmtBRL(data.total)}</div>
+          </div>
+        </summary>
+        <div class="person-body">
+          ${cartoesHtml}
+        </div>
+      </details>`;
+  }).join('');
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function showLoader(b){ document.getElementById('loader').classList.toggle('show', !!b); }
+function showError(msg){
+  document.getElementById('errMsg').innerHTML = msg;
+  document.getElementById('errorOv').classList.add('show');
+}
+function hideError(){ document.getElementById('errorOv').classList.remove('show'); }
+
+async function load(){
+  showLoader(true); hideError();
+  document.getElementById('statusText').textContent = 'Sincronizando…';
+  let table = null; let tabUsed = '';
+  let lastErr = null;
+  for(const tab of SHEET_TABS){
+    try{ table = await fetchSheet(SHEET_ID, tab); tabUsed = tab; break; }
+    catch(e){ lastErr = e; }
+  }
+  if(!table){
+    showLoader(false);
+    showError(`Mensagem técnica: <code>${(lastErr&&lastErr.message)||'erro desconhecido'}</code>.<br>Não consegui abrir a aba <code>Despesas</code>. Verifique se a planilha está com compartilhamento público (link de visualização).`);
+    document.getElementById('statusText').textContent = 'Falhou';
+    return;
+  }
+  try{
+    const rows = rowsFromTable(table);
+    STATE.rows = rows;
+    STATE.parcelas = explodeParcelas(rows);
+    populateFilters(rows);
+    render();
+    const ts = new Date();
+    document.getElementById('lastUpdate').innerHTML = `<b>Atualizado</b> ${ts.toLocaleTimeString('pt-BR')}`;
+    document.getElementById('fonteInfo').textContent = `Google Sheets · aba "${tabUsed}" · ${rows.length} lançamentos · ${STATE.parcelas.length} parcelas`;
+    document.getElementById('statusText').textContent = 'Conectado';
+  }catch(e){
+    showError(`Erro processando os dados: <code>${e.message}</code>`);
+    document.getElementById('statusText').textContent = 'Erro';
+  }finally{
+    showLoader(false);
+  }
+}
+
+// Listeners
+document.getElementById('refresh').addEventListener('click', load);
+document.getElementById('openSheet').addEventListener('click', () => window.open(SHEET_URL, '_blank'));
+
+// Expandir / Recolher todos os <details class="person">
+const _btnExp = document.getElementById('btnExpandAll');
+const _btnCol = document.getElementById('btnCollapseAll');
+if(_btnExp) _btnExp.addEventListener('click', () => {
+  document.querySelectorAll('#parcDetalhe details.person').forEach(d => d.open = true);
+});
+if(_btnCol) _btnCol.addEventListener('click', () => {
+  document.querySelectorAll('#parcDetalhe details.person').forEach(d => d.open = false);
+});
+['fPeriodo','fCartao','fResp','fVenc','fMes','fModo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', e => {
+    STATE.filters[id.slice(1).toLowerCase()] = e.target.value;
+    // mapping: fPeriodo->periodo, fCartao->cartao, fResp->resp, fVenc->venc, fMes->mes, fModo->modo
+    const map = {fPeriodo:'periodo', fCartao:'cartao', fResp:'resp', fVenc:'venc', fMes:'mes', fModo:'modo'};
+    STATE.filters[map[id]] = e.target.value;
+    render();
+  });
+});
+
+// Auto-reload a cada 5 min (opcional, mantém dashboard vivo em modo TV)
+setInterval(load, 5 * 60 * 1000);
+
+load();
+</script>
+</body>
+</html>
