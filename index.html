@@ -334,64 +334,65 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════
-         CUSTOS FIXOS DO ROMÁRIO
+         CUSTOS FIXOS — MÊS ATUAL + PRÓXIMO
     ════════════════════════════════════════════════════════ -->
-    <div class="fixos-section" style="margin-top:0">
+    <div class="fixos-section" style="margin-top:14px">
       <div class="fixos-header">
         <h2>💳 Custos Fixos — Romário</h2>
         <span class="fixos-badge">📌 Recorrente</span>
         <span class="pill" style="font-size:12px;color:var(--muted)">Categorizado automaticamente por palavra-chave</span>
       </div>
 
-      <div class="fixos-kpis">
-        <div class="fixos-kpi total">
-          <div class="lbl">Total Custos Fixos / mês</div>
-          <div class="val" id="cfTotal">R$ 0,00</div>
-          <div class="hint" id="cfTotalHint">—</div>
-        </div>
-        <div class="fixos-kpi streaming">
-          <div class="lbl">🎬 Streaming</div>
-          <div class="val" id="cfStreaming">R$ 0,00</div>
-          <div class="hint" id="cfStreamingHint">— serviços</div>
-        </div>
-        <div class="fixos-kpi outros">
-          <div class="lbl">🔧 Outros Fixos</div>
-          <div class="val" id="cfOutros">R$ 0,00</div>
-          <div class="hint" id="cfOutrosHint">— serviços</div>
-        </div>
-        <div class="fixos-kpi pct">
-          <div class="lbl">% da Fatura (mês atual)</div>
-          <div class="val" id="cfPct">0%</div>
-          <div class="hint" id="cfPctHint">do total do mês</div>
-        </div>
-      </div>
+      <!-- dois painéis lado a lado -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="cfDuoGrid">
 
-      <div class="fixos-grid">
-        <div class="fixos-chart-card">
-          <h3>Distribuição por Categoria</h3>
-          <div class="desc">Streaming vs. Outros Fixos — parcelas do mês atual</div>
-          <div style="position:relative;height:260px"><canvas id="chFixosPie"></canvas></div>
-        </div>
-        <div class="fixos-table-card">
-          <h3>Detalhamento dos Custos Fixos</h3>
-          <div class="desc">Lançamentos classificados como custo fixo para Romário (mês atual)</div>
-          <div class="scroll" style="max-height:300px">
-            <table>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Cartão</th>
-                  <th>Categoria</th>
-                  <th class="num">Valor / mês</th>
-                </tr>
-              </thead>
-              <tbody id="cfTableBody">
-                <tr><td colspan="4" class="empty-state">Carregando…</td></tr>
-              </tbody>
-            </table>
+        <!-- MÊS ATUAL -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--brand);margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px" id="cfLabelAtual">—</div>
+          <div class="fixos-kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="fixos-kpi total"><div class="lbl">Total Fixos</div><div class="val" id="cfTotal">R$ 0,00</div><div class="hint" id="cfTotalHint">—</div></div>
+            <div class="fixos-kpi streaming"><div class="lbl">🎬 Streaming</div><div class="val" id="cfStreaming">R$ 0,00</div><div class="hint" id="cfStreamingHint">—</div></div>
+            <div class="fixos-kpi outros"><div class="lbl">🔧 Outros Fixos</div><div class="val" id="cfOutros">R$ 0,00</div><div class="hint" id="cfOutrosHint">—</div></div>
+            <div class="fixos-kpi pct"><div class="lbl">% da Fatura</div><div class="val" id="cfPct">0%</div><div class="hint" id="cfPctHint">—</div></div>
+          </div>
+          <div class="fixos-chart-card" style="margin-bottom:12px">
+            <h3>Distribuição</h3>
+            <div class="desc" id="cfPieDescAtual">Streaming vs. Outros Fixos</div>
+            <div style="position:relative;height:220px"><canvas id="chFixosPie"></canvas></div>
+          </div>
+          <div class="fixos-table-card">
+            <h3>Detalhamento</h3>
+            <div class="scroll" style="max-height:260px">
+              <table><thead><tr><th>Descrição</th><th>Cartão</th><th>Categoria</th><th class="num">Valor</th></tr></thead>
+              <tbody id="cfTableBody"><tr><td colspan="4" class="empty-state">Carregando…</td></tr></tbody></table>
+            </div>
           </div>
         </div>
-      </div>
+
+        <!-- PRÓXIMO MÊS -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px" id="cfLabelProx">—</div>
+          <div class="fixos-kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="fixos-kpi total"><div class="lbl">Total Fixos</div><div class="val" id="cfTotalP">R$ 0,00</div><div class="hint" id="cfTotalHintP">—</div></div>
+            <div class="fixos-kpi streaming"><div class="lbl">🎬 Streaming</div><div class="val" id="cfStreamingP">R$ 0,00</div><div class="hint" id="cfStreamingHintP">—</div></div>
+            <div class="fixos-kpi outros"><div class="lbl">🔧 Outros Fixos</div><div class="val" id="cfOutrosP">R$ 0,00</div><div class="hint" id="cfOutrosHintP">—</div></div>
+            <div class="fixos-kpi pct"><div class="lbl">% da Fatura</div><div class="val" id="cfPctP">0%</div><div class="hint" id="cfPctHintP">—</div></div>
+          </div>
+          <div class="fixos-chart-card" style="margin-bottom:12px">
+            <h3>Distribuição</h3>
+            <div class="desc" id="cfPieDescProx">Streaming vs. Outros Fixos</div>
+            <div style="position:relative;height:220px"><canvas id="chFixosPieP"></canvas></div>
+          </div>
+          <div class="fixos-table-card">
+            <h3>Detalhamento</h3>
+            <div class="scroll" style="max-height:260px">
+              <table><thead><tr><th>Descrição</th><th>Cartão</th><th>Categoria</th><th class="num">Valor</th></tr></thead>
+              <tbody id="cfTableBodyP"><tr><td colspan="4" class="empty-state">Carregando…</td></tr></tbody></table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /cfDuoGrid -->
     </div>
 
   </div><!-- /tab-romario -->
@@ -1100,17 +1101,17 @@ const RENDA_ROMARIO = 5000;
    RENDER: KPIs DE RENDA DO ROMÁRIO
    ========================================================= */
 function renderRendaKpis() {
-  const nowKey = monthKey(new Date());
+  const now    = new Date();
+  const nowKey = monthKey(now);
 
-  // Fatura do Romário no mês atual (todas as parcelas, pagas ou não)
+  // Fatura do Romário no mês atual
   const parcMesRomario = STATE.parcelas.filter(p =>
     p.mesFaturaKey === nowKey &&
     (p.resp.toLowerCase() === 'romário' || p.resp.toLowerCase() === 'romario')
   );
   const faturaRomario = parcMesRomario.reduce((s,p) => s+p.valorParcela, 0);
 
-  // Custos fixos do Romário (reutiliza a mesma lógica)
-  const fixos = getFixosRomario();
+  const fixos = getFixosRomarioMes(nowKey);
   const totalFixos = [...fixos.streaming, ...fixos.outros].reduce((s,p)=>s+p.valorParcela, 0);
 
   const saldo = RENDA_ROMARIO - faturaRomario;
@@ -1119,10 +1120,10 @@ function renderRendaKpis() {
 
   document.getElementById('kRendaFatura').textContent = fmtBRL(faturaRomario);
   document.getElementById('kRendaFatura').style.color = faturaRomario > RENDA_ROMARIO*0.5 ? '#f59e0b' : '';
-  document.getElementById('kRendaFaturaHint').textContent = `${pctFatura}% da renda`;
+  document.getElementById('kRendaFaturaHint').textContent = `${pctFatura}% da renda · ${monthLabel(nowKey)}`;
 
   document.getElementById('kRendaFixos').textContent = fmtBRL(totalFixos);
-  document.getElementById('kRendaFixosHint').textContent = `${pctFixos}% da renda`;
+  document.getElementById('kRendaFixosHint').textContent = `${pctFixos}% da renda · ${monthLabel(nowKey)}`;
 
   const saldoEl = document.getElementById('kRendaSaldo');
   saldoEl.textContent = fmtBRL(saldo);
@@ -1172,14 +1173,11 @@ function classifyFixo(compra, loja) {
   return null; // não é custo fixo reconhecido
 }
 
-function getFixosRomario() {
-  // Parcelas do mês atual pertencentes ao Romário classificadas como custo fixo
-  const nowKey = monthKey(new Date());
+function getFixosRomarioMes(mesKey) {
   const result = { streaming: [], outros: [] };
-
   for (const p of STATE.parcelas) {
     if (p.resp.toLowerCase() !== 'romário' && p.resp.toLowerCase() !== 'romario') continue;
-    if (p.mesFaturaKey !== nowKey) continue;
+    if (p.mesFaturaKey !== mesKey) continue;
     const cat = classifyFixo(p.compra, p.loja);
     if (cat === 'streaming') result.streaming.push(p);
     else if (cat === 'outros') result.outros.push(p);
@@ -1187,85 +1185,101 @@ function getFixosRomario() {
   return result;
 }
 
-function renderFixosRomario() {
-  const fixos = getFixosRomario();
-  const nowKey = monthKey(new Date());
+// Mantém compatibilidade com chamadas antigas
+function getFixosRomario() {
+  return getFixosRomarioMes(monthKey(new Date()));
+}
 
+function renderMesFixos(mesKey, ids) {
+  const fixos = getFixosRomarioMes(mesKey);
   const totalStreaming = fixos.streaming.reduce((s,p)=>s+p.valorParcela,0);
   const totalOutros    = fixos.outros.reduce((s,p)=>s+p.valorParcela,0);
   const totalFixos     = totalStreaming + totalOutros;
 
-  // KPIs
   const allParcMes = STATE.parcelas.filter(p =>
-    p.mesFaturaKey === nowKey &&
+    p.mesFaturaKey === mesKey &&
     (p.resp.toLowerCase()==='romário'||p.resp.toLowerCase()==='romario')
   );
-  const totalMesResp = allParcMes.reduce((s,p)=>s+p.valorParcela,0);
-  const pct = totalMesResp > 0 ? Math.round((totalFixos/totalMesResp)*100) : 0;
+  const totalFatura = allParcMes.reduce((s,p)=>s+p.valorParcela,0);
+  const pct = totalFatura > 0 ? Math.round((totalFixos/totalFatura)*100) : 0;
+  const qtd = fixos.streaming.length + fixos.outros.length;
 
-  document.getElementById('cfTotal').textContent = fmtBRL(totalFixos);
-  document.getElementById('cfTotalHint').textContent =
-    `${fixos.streaming.length + fixos.outros.length} parcelas · ${monthLabel(nowKey)}`;
-  document.getElementById('cfStreaming').textContent = fmtBRL(totalStreaming);
-  document.getElementById('cfStreamingHint').textContent =
-    `${fixos.streaming.length} parcela${fixos.streaming.length!==1?'s':''}`;
-  document.getElementById('cfOutros').textContent = fmtBRL(totalOutros);
-  document.getElementById('cfOutrosHint').textContent =
-    `${fixos.outros.length} parcela${fixos.outros.length!==1?'s':''}`;
-  document.getElementById('cfPct').textContent = `${pct}%`;
-  document.getElementById('cfPctHint').textContent =
-    totalMesResp > 0 ? `de ${fmtBRL(totalMesResp)} (fatura Romário)` : 'do total do mês';
+  document.getElementById(ids.total).textContent = fmtBRL(totalFixos);
+  document.getElementById(ids.totalHint).textContent = `${qtd} item${qtd!==1?'s':''} · ${monthLabel(mesKey)}`;
+  document.getElementById(ids.streaming).textContent = fmtBRL(totalStreaming);
+  document.getElementById(ids.streamingHint).textContent = `${fixos.streaming.length} item${fixos.streaming.length!==1?'s':''}`;
+  document.getElementById(ids.outros).textContent = fmtBRL(totalOutros);
+  document.getElementById(ids.outrosHint).textContent = `${fixos.outros.length} item${fixos.outros.length!==1?'s':''}`;
+  document.getElementById(ids.pct).textContent = `${pct}%`;
+  document.getElementById(ids.pctHint).textContent = totalFatura > 0 ? `de ${fmtBRL(totalFatura)} (fatura)` : '—';
 
   // Gráfico de pizza
-  const pieCtx = document.getElementById('chFixosPie').getContext('2d');
-  const pieLabels = ['🎬 Streaming','🔧 Outros Fixos'];
-  const pieData   = [totalStreaming, totalOutros];
-  const pieColors = ['#a78bfa','#22c1dc'];
-  makeOrUpdate('fixosPie', pieCtx, {
+  const pieCtx = document.getElementById(ids.pie).getContext('2d');
+  makeOrUpdate(ids.pie, pieCtx, {
     type: 'doughnut',
-    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderColor: '#162238', borderWidth: 3, hoverOffset: 6 }] },
+    data: { labels: ['🎬 Streaming','🔧 Outros Fixos'], datasets: [{ data: [totalStreaming, totalOutros], backgroundColor: ['#a78bfa','#22c1dc'], borderColor: '#162238', borderWidth: 3, hoverOffset: 6 }] },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        legend: { position: 'bottom', labels: { padding: 18, font: { size: 12 }, color: '#c8d3ea', usePointStyle: true, pointStyleWidth: 10 } },
+        legend: { position: 'bottom', labels: { padding: 14, font: { size: 11.5 }, color: '#c8d3ea', usePointStyle: true, pointStyleWidth: 9 } },
         datalabels: {
           display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-          formatter: (val, ctx) => {
-            const tot = ctx.dataset.data.reduce((a,b)=>a+b,0);
-            return tot > 0 ? Math.round(val/tot*100)+'%' : '';
-          },
-          color: '#fff', font: { weight: 'bold', size: 13 }
+          formatter: (val, ctx) => { const tot = ctx.dataset.data.reduce((a,b)=>a+b,0); return tot > 0 ? Math.round(val/tot*100)+'%' : ''; },
+          color: '#fff', font: { weight: 'bold', size: 12 }
         },
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmtBRL(ctx.parsed)}` } }
       }
     }
   });
 
-  // Tabela detalhada
-  const tbody = document.getElementById('cfTableBody');
+  // Tabela
+  const tbody = document.getElementById(ids.tbody);
   const allFixos = [
     ...fixos.streaming.map(p => ({...p, cat:'streaming'})),
     ...fixos.outros.map(p => ({...p, cat:'outros'}))
   ].sort((a,b) => b.valorParcela - a.valorParcela);
 
   if (allFixos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">Nenhum custo fixo identificado para Romário no mês atual.<br><span style="font-size:11px">Verifique se os lançamentos contêm palavras-chave como "Netflix", "Spotify", "mensalidade", etc.</span></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="padding:16px;font-size:12.5px">Nenhum custo fixo identificado.<br><span style="font-size:11px">Verifique palavras-chave como "Netflix", "mensalidade", etc.</span></div></td></tr>`;
     return;
   }
-
   tbody.innerHTML = allFixos.map(p => {
     const tagClass = p.cat === 'streaming' ? 'streaming' : 'outros-fixo';
-    const tagLabel = p.cat === 'streaming' ? '🎬 Streaming' : '🔧 Outros Fixos';
+    const tagLabel = p.cat === 'streaming' ? '🎬 Streaming' : '🔧 Outros';
     const cartaoClass = (p.cartao||'').toLowerCase().includes('santander') ? 'santander'
-                      : (p.cartao||'').toLowerCase().includes('cred')       ? 'credcard' : 'gen';
+                      : (p.cartao||'').toLowerCase().includes('cred') ? 'credcard' : 'gen';
     const desc = [p.compra, p.loja].filter(Boolean).join(' · ') || '—';
     return `<tr>
-      <td style="max-width:220px;word-break:break-word">${desc}</td>
+      <td style="max-width:180px;word-break:break-word">${desc}</td>
       <td><span class="tag ${cartaoClass}">${p.cartao||'—'}</span></td>
       <td><span class="tag ${tagClass}">${tagLabel}</span></td>
       <td class="num" style="font-weight:700">${fmtBRL(p.valorParcela)}</td>
     </tr>`;
   }).join('');
+}
+
+function renderFixosRomario() {
+  const now  = new Date();
+  const keyAtual = monthKey(now);
+  const keyProx  = monthKey(new Date(now.getFullYear(), now.getMonth()+1, 1));
+
+  document.getElementById('cfLabelAtual').textContent = `📅 ${monthLabel(keyAtual)} — Mês Atual`;
+  document.getElementById('cfLabelProx').textContent  = `📅 ${monthLabel(keyProx)} — Próximo Mês`;
+
+  renderMesFixos(keyAtual, {
+    total:'cfTotal', totalHint:'cfTotalHint',
+    streaming:'cfStreaming', streamingHint:'cfStreamingHint',
+    outros:'cfOutros', outrosHint:'cfOutrosHint',
+    pct:'cfPct', pctHint:'cfPctHint',
+    pie:'chFixosPie', tbody:'cfTableBody'
+  });
+  renderMesFixos(keyProx, {
+    total:'cfTotalP', totalHint:'cfTotalHintP',
+    streaming:'cfStreamingP', streamingHint:'cfStreamingHintP',
+    outros:'cfOutrosP', outrosHint:'cfOutrosHintP',
+    pct:'cfPctP', pctHint:'cfPctHintP',
+    pie:'chFixosPieP', tbody:'cfTableBodyP'
+  });
 }
 
 /* =========================================================
