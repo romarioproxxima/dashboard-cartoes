@@ -137,6 +137,10 @@
     .tools{width:100%;justify-content:flex-start}
   }
 
+  .renda-kpis{margin-top:-6px;margin-bottom:20px;border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:14px;background:rgba(34,197,94,.04);box-shadow:var(--shadow)}
+  .renda-kpis .kpi{background:var(--panel-2)}
+  .renda-kpis .kpi.good::before{background:linear-gradient(180deg,#22c55e,#10b981)}
+
   /* ── Custos Fixos do Romário ── */
   .fixos-section{margin-top:14px}
   .fixos-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -232,6 +236,35 @@
     <div class="kpi warn"><div class="lbl">A pagar neste mês</div><div class="val" id="kAbertoMes">R$ 0,00</div><div class="hint" id="kAbertoMesHint">— em aberto</div></div>
     <div class="kpi good"><div class="lbl">Maior responsável</div><div class="val" id="kTop">—</div><div class="hint" id="kTopHint">—</div></div>
     <div class="kpi warn"><div class="lbl">Parcelas futuras</div><div class="val" id="kFuturas">R$ 0,00</div><div class="hint" id="kFuturasHint">— a vencer</div></div>
+  </div>
+
+  <!-- KPIs RENDA ROMÁRIO -->
+  <div class="kpis renda-kpis">
+    <div class="kpi renda-header-kpi" style="grid-column:1/2">
+      <div class="lbl">💰 Renda — Romário</div>
+      <div class="val" style="color:#22c55e">R$ 5.000,00</div>
+      <div class="hint">Base mensal fixa</div>
+    </div>
+    <div class="kpi" style="grid-column:2/3">
+      <div class="lbl">Fatura Romário (mês)</div>
+      <div class="val" id="kRendaFatura">R$ 0,00</div>
+      <div class="hint" id="kRendaFaturaHint">— da renda</div>
+    </div>
+    <div class="kpi warn" style="grid-column:3/4">
+      <div class="lbl">Custos Fixos Romário</div>
+      <div class="val" id="kRendaFixos">R$ 0,00</div>
+      <div class="hint" id="kRendaFixosHint">— da renda</div>
+    </div>
+    <div class="kpi good" style="grid-column:4/5">
+      <div class="lbl">Saldo Disponível</div>
+      <div class="val" id="kRendaSaldo">R$ 0,00</div>
+      <div class="hint" id="kRendaSaldoHint">após fatura do mês</div>
+    </div>
+    <div class="kpi info" style="grid-column:5/6">
+      <div class="lbl">Comprometimento</div>
+      <div class="val" id="kRendaPct">0%</div>
+      <div class="hint" id="kRendaPctHint">da renda na fatura</div>
+    </div>
   </div>
 
   <!-- GRÁFICOS -->
@@ -897,6 +930,7 @@ function render(){
 
   // ============ Custos Fixos do Romário ============
   renderFixosRomario();
+  renderRendaKpis();
 }
 
 function tagClassFor(cartao){
@@ -1018,7 +1052,49 @@ function renderParcelasDetalhe(futuras){
    Outros:    assinaturas, mensalidades, planos e serviços fixos em geral.
    A detecção é case-insensitive e busca em `compra` e `loja`. */
 
-const FIXOS_STREAMING_KW = [
+const RENDA_ROMARIO = 5000;
+
+/* =========================================================
+   RENDER: KPIs DE RENDA DO ROMÁRIO
+   ========================================================= */
+function renderRendaKpis() {
+  const nowKey = monthKey(new Date());
+
+  // Fatura do Romário no mês atual (todas as parcelas, pagas ou não)
+  const parcMesRomario = STATE.parcelas.filter(p =>
+    p.mesFaturaKey === nowKey &&
+    (p.resp.toLowerCase() === 'romário' || p.resp.toLowerCase() === 'romario')
+  );
+  const faturaRomario = parcMesRomario.reduce((s,p) => s+p.valorParcela, 0);
+
+  // Custos fixos do Romário (reutiliza a mesma lógica)
+  const fixos = getFixosRomario();
+  const totalFixos = [...fixos.streaming, ...fixos.outros].reduce((s,p)=>s+p.valorParcela, 0);
+
+  const saldo = RENDA_ROMARIO - faturaRomario;
+  const pctFatura = Math.round((faturaRomario / RENDA_ROMARIO) * 100);
+  const pctFixos  = Math.round((totalFixos    / RENDA_ROMARIO) * 100);
+
+  document.getElementById('kRendaFatura').textContent = fmtBRL(faturaRomario);
+  document.getElementById('kRendaFatura').style.color = faturaRomario > RENDA_ROMARIO*0.5 ? '#f59e0b' : '';
+  document.getElementById('kRendaFaturaHint').textContent = `${pctFatura}% da renda`;
+
+  document.getElementById('kRendaFixos').textContent = fmtBRL(totalFixos);
+  document.getElementById('kRendaFixosHint').textContent = `${pctFixos}% da renda`;
+
+  const saldoEl = document.getElementById('kRendaSaldo');
+  saldoEl.textContent = fmtBRL(saldo);
+  saldoEl.style.color = saldo < 0 ? '#ef4444' : saldo < 500 ? '#f59e0b' : '#22c55e';
+  document.getElementById('kRendaSaldoHint').textContent =
+    saldo < 0 ? '⚠️ fatura acima da renda' : 'após fatura do mês';
+
+  const pctEl = document.getElementById('kRendaPct');
+  pctEl.textContent = `${pctFatura}%`;
+  pctEl.style.color = pctFatura > 80 ? '#ef4444' : pctFatura > 50 ? '#f59e0b' : '#22c55e';
+  document.getElementById('kRendaPctHint').textContent = `${fmtBRL(faturaRomario)} na fatura`;
+}
+
+ = [
   'netflix','spotify','prime video','amazon prime','amazon video',
   'hbo','hbo max','max ','disney','disney+','star+','star plus',
   'globoplay','paramount','paramount+','apple tv','apple music',
