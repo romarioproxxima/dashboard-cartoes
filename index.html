@@ -137,6 +137,38 @@
     .tools{width:100%;justify-content:flex-start}
   }
 
+  /* ── Custos Fixos do Romário ── */
+  .fixos-section{margin-top:14px}
+  .fixos-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .fixos-header h2{margin:0;font-size:17px;font-weight:800;letter-spacing:.1px}
+  .fixos-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(34,193,220,.15),rgba(91,141,239,.15));border:1px solid rgba(91,141,239,.35);color:#93c5fd;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:.6px;text-transform:uppercase}
+  .fixos-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .fixos-kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .fixos-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+  .fixos-kpi.streaming::before{background:linear-gradient(180deg,#a78bfa,#7c3aed)}
+  .fixos-kpi.outros::before{background:linear-gradient(180deg,#22c1dc,#0891b2)}
+  .fixos-kpi.total::before{background:linear-gradient(180deg,#f59e0b,#ea580c)}
+  .fixos-kpi.pct::before{background:linear-gradient(180deg,#22c55e,#16a34a)}
+  .fixos-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:7px}
+  .fixos-kpi .val{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .fixos-kpi .hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+  .fixos-grid{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start}
+  .fixos-chart-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .fixos-chart-card h3{margin:0 0 2px 0;font-size:14px;font-weight:700}
+  .fixos-chart-card .desc{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .fixos-table-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .fixos-table-card h3{margin:0 0 2px 0;font-size:14px;font-weight:700}
+  .fixos-table-card .desc{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .tag.streaming{background:rgba(167,139,250,.15);color:#c4b5fd;border:1px solid rgba(167,139,250,.35)}
+  .tag.outros-fixo{background:rgba(34,193,220,.15);color:#67e8f9;border:1px solid rgba(34,193,220,.35)}
+  @media (max-width:1100px){
+    .fixos-grid{grid-template-columns:1fr}
+    .fixos-kpis{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:640px){
+    .fixos-kpis{grid-template-columns:1fr 1fr}
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:transparent}
@@ -237,6 +269,67 @@
         <span class="pill small" id="parcSummary">—</span>
       </div>
       <div id="parcDetalhe" class="parc-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       CUSTOS FIXOS DO ROMÁRIO
+  ════════════════════════════════════════════════════════ -->
+  <div class="fixos-section">
+    <div class="fixos-header">
+      <h2>💳 Custos Fixos — Romário</h2>
+      <span class="fixos-badge">📌 Recorrente</span>
+      <span class="pill" style="font-size:12px;color:var(--muted)">Categorizado automaticamente por palavra-chave</span>
+    </div>
+
+    <div class="fixos-kpis">
+      <div class="fixos-kpi total">
+        <div class="lbl">Total Custos Fixos / mês</div>
+        <div class="val" id="cfTotal">R$ 0,00</div>
+        <div class="hint" id="cfTotalHint">—</div>
+      </div>
+      <div class="fixos-kpi streaming">
+        <div class="lbl">🎬 Streaming</div>
+        <div class="val" id="cfStreaming">R$ 0,00</div>
+        <div class="hint" id="cfStreamingHint">— serviços</div>
+      </div>
+      <div class="fixos-kpi outros">
+        <div class="lbl">🔧 Outros Fixos</div>
+        <div class="val" id="cfOutros">R$ 0,00</div>
+        <div class="hint" id="cfOutrosHint">— serviços</div>
+      </div>
+      <div class="fixos-kpi pct">
+        <div class="lbl">% da Fatura (mês atual)</div>
+        <div class="val" id="cfPct">0%</div>
+        <div class="hint" id="cfPctHint">do total do mês</div>
+      </div>
+    </div>
+
+    <div class="fixos-grid">
+      <div class="fixos-chart-card">
+        <h3>Distribuição por Categoria</h3>
+        <div class="desc">Streaming vs. Outros Fixos — parcelas do mês atual</div>
+        <div style="position:relative;height:260px"><canvas id="chFixosPie"></canvas></div>
+      </div>
+      <div class="fixos-table-card">
+        <h3>Detalhamento dos Custos Fixos</h3>
+        <div class="desc">Lançamentos classificados como custo fixo para Romário (mês atual)</div>
+        <div class="scroll" style="max-height:300px">
+          <table>
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Cartão</th>
+                <th>Categoria</th>
+                <th class="num">Valor / mês</th>
+              </tr>
+            </thead>
+            <tbody id="cfTableBody">
+              <tr><td colspan="4" class="empty-state">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -801,6 +894,9 @@ function render(){
 
   // ============ NOVO: Parcelas a Pagar — Hierarquia Responsável → Cartão → Compra ============
   renderParcelasDetalhe(futurasFiltro);
+
+  // ============ Custos Fixos do Romário ============
+  renderFixosRomario();
 }
 
 function tagClassFor(cartao){
@@ -912,6 +1008,144 @@ function renderParcelasDetalhe(futuras){
           ${cartoesHtml}
         </div>
       </details>`;
+  }).join('');
+}
+
+/* =========================================================
+   CUSTOS FIXOS DO ROMÁRIO — CATEGORIZAÇÃO POR PALAVRA-CHAVE
+   =========================================================
+   Streaming: serviços de entretenimento digital recorrentes.
+   Outros:    assinaturas, mensalidades, planos e serviços fixos em geral.
+   A detecção é case-insensitive e busca em `compra` e `loja`. */
+
+const FIXOS_STREAMING_KW = [
+  'netflix','spotify','prime video','amazon prime','amazon video',
+  'hbo','hbo max','max ','disney','disney+','star+','star plus',
+  'globoplay','paramount','paramount+','apple tv','apple music',
+  'youtube premium','deezer','tidal','crunchyroll','mubi',
+  'looke','telecine','twitch','twitch prime',
+  'streaming','stream'
+];
+
+const FIXOS_OUTROS_KW = [
+  'mensalidade','assinatura','plano ','anuidade','recorrente',
+  'seguro','seguro de vida','seguro auto','seguro residencial',
+  'academia','gym','gympass','smartfit','totalpass',
+  'internet','tim ','claro ','vivo ','oi ','algar',
+  'condominio','condomínio','iptu','agua','água',
+  'luz ','energia ','enel ','equatorial ',
+  'google one','google storage','icloud','dropbox','onedrive',
+  'adobe','microsoft 365','office 365','notion','figma',
+  'dental','odonto','convenio','convênio','plano de saude',
+  'plano de saúde','unimed','amil','bradesco saude',
+  'escola','faculdade','curso ','aluguel','rent',
+  'cartao outros','outros cartão','outros cartao'
+];
+
+function classifyFixo(compra, loja) {
+  const text = `${compra || ''} ${loja || ''}`.toLowerCase();
+  for (const kw of FIXOS_STREAMING_KW) {
+    if (text.includes(kw)) return 'streaming';
+  }
+  for (const kw of FIXOS_OUTROS_KW) {
+    if (text.includes(kw)) return 'outros';
+  }
+  return null; // não é custo fixo reconhecido
+}
+
+function getFixosRomario() {
+  // Parcelas do mês atual pertencentes ao Romário classificadas como custo fixo
+  const nowKey = monthKey(new Date());
+  const result = { streaming: [], outros: [] };
+
+  for (const p of STATE.parcelas) {
+    if (p.resp.toLowerCase() !== 'romário' && p.resp.toLowerCase() !== 'romario') continue;
+    if (p.mesFaturaKey !== nowKey) continue;
+    const cat = classifyFixo(p.compra, p.loja);
+    if (cat === 'streaming') result.streaming.push(p);
+    else if (cat === 'outros') result.outros.push(p);
+  }
+  return result;
+}
+
+function renderFixosRomario() {
+  const fixos = getFixosRomario();
+  const nowKey = monthKey(new Date());
+
+  const totalStreaming = fixos.streaming.reduce((s,p)=>s+p.valorParcela,0);
+  const totalOutros    = fixos.outros.reduce((s,p)=>s+p.valorParcela,0);
+  const totalFixos     = totalStreaming + totalOutros;
+
+  // KPIs
+  const allParcMes = STATE.parcelas.filter(p =>
+    p.mesFaturaKey === nowKey &&
+    (p.resp.toLowerCase()==='romário'||p.resp.toLowerCase()==='romario')
+  );
+  const totalMesResp = allParcMes.reduce((s,p)=>s+p.valorParcela,0);
+  const pct = totalMesResp > 0 ? Math.round((totalFixos/totalMesResp)*100) : 0;
+
+  document.getElementById('cfTotal').textContent = fmtBRL(totalFixos);
+  document.getElementById('cfTotalHint').textContent =
+    `${fixos.streaming.length + fixos.outros.length} parcelas · ${monthLabel(nowKey)}`;
+  document.getElementById('cfStreaming').textContent = fmtBRL(totalStreaming);
+  document.getElementById('cfStreamingHint').textContent =
+    `${fixos.streaming.length} parcela${fixos.streaming.length!==1?'s':''}`;
+  document.getElementById('cfOutros').textContent = fmtBRL(totalOutros);
+  document.getElementById('cfOutrosHint').textContent =
+    `${fixos.outros.length} parcela${fixos.outros.length!==1?'s':''}`;
+  document.getElementById('cfPct').textContent = `${pct}%`;
+  document.getElementById('cfPctHint').textContent =
+    totalMesResp > 0 ? `de ${fmtBRL(totalMesResp)} (fatura Romário)` : 'do total do mês';
+
+  // Gráfico de pizza
+  const pieCtx = document.getElementById('chFixosPie').getContext('2d');
+  const pieLabels = ['🎬 Streaming','🔧 Outros Fixos'];
+  const pieData   = [totalStreaming, totalOutros];
+  const pieColors = ['#a78bfa','#22c1dc'];
+  makeOrUpdate('fixosPie', pieCtx, {
+    type: 'doughnut',
+    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderColor: '#162238', borderWidth: 3, hoverOffset: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 18, font: { size: 12 }, color: '#c8d3ea', usePointStyle: true, pointStyleWidth: 10 } },
+        datalabels: {
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+          formatter: (val, ctx) => {
+            const tot = ctx.dataset.data.reduce((a,b)=>a+b,0);
+            return tot > 0 ? Math.round(val/tot*100)+'%' : '';
+          },
+          color: '#fff', font: { weight: 'bold', size: 13 }
+        },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmtBRL(ctx.parsed)}` } }
+      }
+    }
+  });
+
+  // Tabela detalhada
+  const tbody = document.getElementById('cfTableBody');
+  const allFixos = [
+    ...fixos.streaming.map(p => ({...p, cat:'streaming'})),
+    ...fixos.outros.map(p => ({...p, cat:'outros'}))
+  ].sort((a,b) => b.valorParcela - a.valorParcela);
+
+  if (allFixos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">Nenhum custo fixo identificado para Romário no mês atual.<br><span style="font-size:11px">Verifique se os lançamentos contêm palavras-chave como "Netflix", "Spotify", "mensalidade", etc.</span></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = allFixos.map(p => {
+    const tagClass = p.cat === 'streaming' ? 'streaming' : 'outros-fixo';
+    const tagLabel = p.cat === 'streaming' ? '🎬 Streaming' : '🔧 Outros Fixos';
+    const cartaoClass = (p.cartao||'').toLowerCase().includes('santander') ? 'santander'
+                      : (p.cartao||'').toLowerCase().includes('cred')       ? 'credcard' : 'gen';
+    const desc = [p.compra, p.loja].filter(Boolean).join(' · ') || '—';
+    return `<tr>
+      <td style="max-width:220px;word-break:break-word">${desc}</td>
+      <td><span class="tag ${cartaoClass}">${p.cartao||'—'}</span></td>
+      <td><span class="tag ${tagClass}">${tagLabel}</span></td>
+      <td class="num" style="font-weight:700">${fmtBRL(p.valorParcela)}</td>
+    </tr>`;
   }).join('');
 }
 
