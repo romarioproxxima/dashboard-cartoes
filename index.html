@@ -305,32 +305,30 @@
   <div class="tab-pane" id="tab-romario">
 
     <!-- KPIs RENDA ROMÁRIO -->
-    <div class="kpis renda-kpis" style="margin-top:0">
-      <div class="kpi renda-header-kpi" style="grid-column:1/2">
-        <div class="lbl">💰 Renda — Romário</div>
-        <div class="val" style="color:#22c55e">R$ 5.000,00</div>
-        <div class="hint">Base mensal fixa</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+      <!-- RENDA MÊS ATUAL -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px" id="kRendaLabelAtual">—</div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:12px">
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><div class="val" style="color:#22c55e;font-size:20px">R$ 5.000</div><div class="hint">Base mensal</div></div>
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">Fatura</div><div class="val" id="kRendaFatura" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaFaturaHint">—</div></div>
+          <div class="kpi good" style="background:var(--panel-2)"><div class="lbl">Saldo</div><div class="val" id="kRendaSaldo" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaSaldoHint">—</div></div>
+          <div class="kpi info" style="background:var(--panel-2)"><div class="lbl">Comprometido</div><div class="val" id="kRendaPct" style="font-size:20px">0%</div><div class="hint" id="kRendaPctHint">—</div></div>
+        </div>
       </div>
-      <div class="kpi" style="grid-column:2/3">
-        <div class="lbl">Fatura Romário (mês)</div>
-        <div class="val" id="kRendaFatura">R$ 0,00</div>
-        <div class="hint" id="kRendaFaturaHint">— da renda</div>
+
+      <!-- RENDA PRÓXIMO MÊS -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px" id="kRendaLabelProx">—</div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:12px">
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><div class="val" style="color:#22c55e;font-size:20px">R$ 5.000</div><div class="hint">Base mensal</div></div>
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">Fatura</div><div class="val" id="kRendaFaturaP" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaFaturaHintP">—</div></div>
+          <div class="kpi good" style="background:var(--panel-2)"><div class="lbl">Saldo</div><div class="val" id="kRendaSaldoP" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaSaldoHintP">—</div></div>
+          <div class="kpi info" style="background:var(--panel-2)"><div class="lbl">Comprometido</div><div class="val" id="kRendaPctP" style="font-size:20px">0%</div><div class="hint" id="kRendaPctHintP">—</div></div>
+        </div>
       </div>
-      <div class="kpi warn" style="grid-column:3/4">
-        <div class="lbl">Custos Fixos Romário</div>
-        <div class="val" id="kRendaFixos">R$ 0,00</div>
-        <div class="hint" id="kRendaFixosHint">— da renda</div>
-      </div>
-      <div class="kpi good" style="grid-column:4/5">
-        <div class="lbl">Saldo Disponível</div>
-        <div class="val" id="kRendaSaldo">R$ 0,00</div>
-        <div class="hint" id="kRendaSaldoHint">após fatura do mês</div>
-      </div>
-      <div class="kpi info" style="grid-column:5/6">
-        <div class="lbl">Comprometimento</div>
-        <div class="val" id="kRendaPct">0%</div>
-        <div class="hint" id="kRendaPctHint">da renda na fatura</div>
-      </div>
+
     </div>
 
     <!-- ═══════════════════════════════════════════════════════
@@ -1101,40 +1099,41 @@ const RENDA_ROMARIO = 5000;
    RENDER: KPIs DE RENDA DO ROMÁRIO
    ========================================================= */
 function renderRendaKpis() {
-  const now    = new Date();
-  const nowKey = monthKey(now);
+  const now     = new Date();
+  const keyAtual = monthKey(now);
+  const keyProx  = monthKey(new Date(now.getFullYear(), now.getMonth()+1, 1));
 
-  // Fatura do Romário no mês atual
-  const parcMesRomario = STATE.parcelas.filter(p =>
-    p.mesFaturaKey === nowKey &&
-    (p.resp.toLowerCase() === 'romário' || p.resp.toLowerCase() === 'romario')
-  );
-  const faturaRomario = parcMesRomario.reduce((s,p) => s+p.valorParcela, 0);
+  document.getElementById('kRendaLabelAtual').textContent = `📅 ${monthLabel(keyAtual)} — Mês Atual`;
+  document.getElementById('kRendaLabelProx').textContent  = `📅 ${monthLabel(keyProx)} — Próximo Mês`;
 
-  const fixos = getFixosRomarioMes(nowKey);
-  const totalFixos = [...fixos.streaming, ...fixos.outros].reduce((s,p)=>s+p.valorParcela, 0);
+  function calcMes(mesKey, ids) {
+    const parcMes = STATE.parcelas.filter(p =>
+      p.mesFaturaKey === mesKey &&
+      (p.resp.toLowerCase() === 'romário' || p.resp.toLowerCase() === 'romario')
+    );
+    const fatura = parcMes.reduce((s,p) => s+p.valorParcela, 0);
+    const saldo  = RENDA_ROMARIO - fatura;
+    const pct    = Math.round((fatura / RENDA_ROMARIO) * 100);
 
-  const saldo = RENDA_ROMARIO - faturaRomario;
-  const pctFatura = Math.round((faturaRomario / RENDA_ROMARIO) * 100);
-  const pctFixos  = Math.round((totalFixos    / RENDA_ROMARIO) * 100);
+    const fatEl = document.getElementById(ids.fatura);
+    fatEl.textContent = fmtBRL(fatura);
+    fatEl.style.color = fatura > RENDA_ROMARIO*0.5 ? '#f59e0b' : '';
+    document.getElementById(ids.faturaHint).textContent = `${pct}% da renda`;
 
-  document.getElementById('kRendaFatura').textContent = fmtBRL(faturaRomario);
-  document.getElementById('kRendaFatura').style.color = faturaRomario > RENDA_ROMARIO*0.5 ? '#f59e0b' : '';
-  document.getElementById('kRendaFaturaHint').textContent = `${pctFatura}% da renda · ${monthLabel(nowKey)}`;
+    const saldoEl = document.getElementById(ids.saldo);
+    saldoEl.textContent = fmtBRL(saldo);
+    saldoEl.style.color = saldo < 0 ? '#ef4444' : saldo < 500 ? '#f59e0b' : '#22c55e';
+    document.getElementById(ids.saldoHint).textContent =
+      saldo < 0 ? '⚠️ acima da renda' : 'disponível';
 
-  document.getElementById('kRendaFixos').textContent = fmtBRL(totalFixos);
-  document.getElementById('kRendaFixosHint').textContent = `${pctFixos}% da renda · ${monthLabel(nowKey)}`;
+    const pctEl = document.getElementById(ids.pct);
+    pctEl.textContent = `${pct}%`;
+    pctEl.style.color = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
+    document.getElementById(ids.pctHint).textContent = `${fmtBRL(fatura)} na fatura`;
+  }
 
-  const saldoEl = document.getElementById('kRendaSaldo');
-  saldoEl.textContent = fmtBRL(saldo);
-  saldoEl.style.color = saldo < 0 ? '#ef4444' : saldo < 500 ? '#f59e0b' : '#22c55e';
-  document.getElementById('kRendaSaldoHint').textContent =
-    saldo < 0 ? '⚠️ fatura acima da renda' : 'após fatura do mês';
-
-  const pctEl = document.getElementById('kRendaPct');
-  pctEl.textContent = `${pctFatura}%`;
-  pctEl.style.color = pctFatura > 80 ? '#ef4444' : pctFatura > 50 ? '#f59e0b' : '#22c55e';
-  document.getElementById('kRendaPctHint').textContent = `${fmtBRL(faturaRomario)} na fatura`;
+  calcMes(keyAtual, { fatura:'kRendaFatura', faturaHint:'kRendaFaturaHint', saldo:'kRendaSaldo', saldoHint:'kRendaSaldoHint', pct:'kRendaPct', pctHint:'kRendaPctHint' });
+  calcMes(keyProx,  { fatura:'kRendaFaturaP', faturaHint:'kRendaFaturaHintP', saldo:'kRendaSaldoP', saldoHint:'kRendaSaldoHintP', pct:'kRendaPctP', pctHint:'kRendaPctHintP' });
 }
 
 const FIXOS_STREAMING_KW = [
