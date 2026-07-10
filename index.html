@@ -218,6 +218,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
       Dashboard Geral
     </button>
+    <button class="tab-btn" onclick="switchTab('faturas')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      Faturas
+    </button>
     <button class="tab-btn" onclick="switchTab('romario')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       Análise Romário
@@ -394,6 +398,58 @@
     </div>
 
   </div><!-- /tab-romario -->
+
+  <!-- ABA 3: FATURAS -->
+  <div class="tab-pane" id="tab-faturas">
+
+    <!-- FILTRO DE MÊS DA FATURA -->
+    <div class="filters" style="grid-template-columns:220px 1fr;align-items:end">
+      <div class="filter">
+        <label>Mês da fatura</label>
+        <select id="ffMes"></select>
+      </div>
+      <div class="filter" style="display:flex;justify-content:flex-end">
+        <span class="pill" id="ffInfo">—</span>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi info"><div class="lbl">Fatura total do mês</div><div class="val" id="fkTotal">R$ 0,00</div><div class="hint" id="fkTotalHint">—</div></div>
+      <div class="kpi good"><div class="lbl">Pago</div><div class="val" id="fkPago">R$ 0,00</div><div class="hint" id="fkPagoHint">—</div></div>
+      <div class="kpi warn"><div class="lbl">Em aberto</div><div class="val" id="fkAberto">R$ 0,00</div><div class="hint" id="fkAbertoHint">—</div></div>
+      <div class="kpi"><div class="lbl">Maior cartão</div><div class="val" id="fkTopCartao">—</div><div class="hint" id="fkTopCartaoHint">—</div></div>
+      <div class="kpi good"><div class="lbl">Maior responsável</div><div class="val" id="fkTopResp">—</div><div class="hint" id="fkTopRespHint">—</div></div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="grid">
+      <div class="card">
+        <h3>Fatura por Cartão</h3>
+        <div class="desc">Total da fatura de cada cartão no mês selecionado</div>
+        <div class="chart-holder"><canvas id="chFatCartao"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3>Fatura por Responsável</h3>
+        <div class="desc">Total do mês de cada responsável — empilhado por cartão</div>
+        <div class="chart-holder"><canvas id="chFatResp"></canvas></div>
+      </div>
+
+      <div class="card full">
+        <h3>Evolução das Faturas por Cartão</h3>
+        <div class="desc">Total da fatura de cada cartão, mês a mês — empilhado por cartão</div>
+        <div class="chart-holder"><canvas id="chFatEvolCartao"></canvas></div>
+      </div>
+
+      <div class="card full">
+        <h3>Total Mensal por Responsável</h3>
+        <div class="desc">Fatura de cada responsável em cada mês — empilhado por responsável</div>
+        <div class="chart-holder"><canvas id="chFatEvolResp"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /tab-faturas -->
 
   <footer>
     <div>Fonte: <span id="fonteInfo">—</span></div>
@@ -960,6 +1016,204 @@ function render(){
   // ============ Custos Fixos do Romário ============
   renderFixosRomario();
   renderRendaKpis();
+
+  // ============ Aba Faturas ============
+  renderFaturas();
+}
+
+/* =========================================================
+   ABA FATURAS — totais por FATURA (parcelas de cada mês)
+   ========================================================= */
+let FAT_MES = null;
+
+function populateFatMes(){
+  const el = document.getElementById('ffMes');
+  if(!el || !STATE.parcelas.length) return;
+  const keys = [...new Set(STATE.parcelas.map(p => p.mesFaturaKey))].sort();
+  const desired = FAT_MES || monthKey(new Date());
+  el.innerHTML = keys.map(k => `<option value="${k}">${monthLabel(k)}</option>`).join('');
+  FAT_MES = keys.includes(desired) ? desired
+          : (keys.includes(monthKey(new Date())) ? monthKey(new Date()) : keys[keys.length-1]);
+  el.value = FAT_MES;
+}
+
+function renderFaturas(){
+  if(!STATE.parcelas.length) return;
+  populateFatMes();
+  const mesKey = FAT_MES;
+  const parcMes = STATE.parcelas.filter(p => p.mesFaturaKey === mesKey);
+
+  /* ===== KPIs ===== */
+  const total  = parcMes.reduce((s,p)=>s+p.valorParcela,0);
+  const pago   = parcMes.filter(p=>p.paga).reduce((s,p)=>s+p.valorParcela,0);
+  const aberto = total - pago;
+  const nPagas = parcMes.filter(p=>p.paga).length;
+  const nAberto = parcMes.length - nPagas;
+  document.getElementById('fkTotal').textContent = fmtBRL(total);
+  document.getElementById('fkTotalHint').textContent = `${monthLabel(mesKey)} · ${parcMes.length} parcelas`;
+  document.getElementById('fkPago').textContent = fmtBRL(pago);
+  document.getElementById('fkPagoHint').textContent = `${nPagas} parcela${nPagas!==1?'s':''} paga${nPagas!==1?'s':''}`;
+  document.getElementById('fkAberto').textContent = fmtBRL(aberto);
+  document.getElementById('fkAbertoHint').textContent = `${nAberto} parcela${nAberto!==1?'s':''} em aberto`;
+
+  const byCartaoMes = {};
+  for(const p of parcMes){ byCartaoMes[p.cartao] = (byCartaoMes[p.cartao]||0) + p.valorParcela; }
+  const topC = Object.entries(byCartaoMes).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('fkTopCartao').textContent = topC ? topC[0] : '—';
+  document.getElementById('fkTopCartaoHint').textContent = topC ? fmtBRL(topC[1]) : '—';
+
+  const byRespMes = {};
+  for(const p of parcMes){ byRespMes[p.resp] = (byRespMes[p.resp]||0) + p.valorParcela; }
+  const topR = Object.entries(byRespMes).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('fkTopResp').textContent = topR ? topR[0] : '—';
+  document.getElementById('fkTopRespHint').textContent = topR ? fmtBRL(topR[1]) : '—';
+
+  const ffInfo = document.getElementById('ffInfo');
+  if(ffInfo) ffInfo.textContent = `Fatura de ${monthLabel(mesKey)} · ${Object.keys(byCartaoMes).length} cartões · ${Object.keys(byRespMes).length} responsáveis`;
+
+  /* ===== Gráfico 1: Fatura por Cartão (mês selecionado) ===== */
+  const fcLabels = Object.keys(byCartaoMes).sort((a,b)=>byCartaoMes[b]-byCartaoMes[a]);
+  const fcData   = fcLabels.map(k => Math.round(byCartaoMes[k]*100)/100);
+  const fcMax    = Math.max(0, ...fcData);
+  makeOrUpdate('chFatCartao', document.getElementById('chFatCartao'), {
+    type:'bar',
+    data:{ labels:fcLabels, datasets:[{ label:'Fatura', data:fcData, backgroundColor:fcLabels.map(c=>colorFor(c)), borderRadius:8, borderSkipped:false, maxBarThickness:48 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ right: 90 } },
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx => fmtBRL(ctx.parsed.x) } },
+        datalabels:{
+          display:true, anchor:'end', align:'end', clamp:true, clip:false,
+          color:'#e6edf7', font:{ weight:'600', size:11 },
+          formatter:v => fmtBRL(v)
+        }
+      },
+      scales:{
+        x:{ grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: fcMax*1.15 },
+        y:{ grid:{display:false} }
+      }
+    }
+  });
+
+  /* ===== Gráfico 2: Fatura por Responsável (mês, empilhado por cartão) ===== */
+  const frResps   = Object.keys(byRespMes).sort((a,b)=>byRespMes[b]-byRespMes[a]);
+  const frCartoes = fcLabels;
+  const frMap = {};
+  for(const r of frResps){ frMap[r] = {}; for(const c of frCartoes){ frMap[r][c] = 0; } }
+  for(const p of parcMes){ frMap[p.resp][p.cartao] += p.valorParcela; }
+  const frDatasets = frCartoes.map((c,i) => ({
+    label:c,
+    data: frResps.map(r => Math.round((frMap[r][c]||0)*100)/100),
+    backgroundColor: colorFor(c,i),
+    borderRadius:6, borderSkipped:false, maxBarThickness:30
+  }));
+  const frTotals = frResps.map(r => byRespMes[r]);
+  const frMax = Math.max(0, ...frTotals);
+  const frLastIdx = frDatasets.length - 1;
+  makeOrUpdate('chFatResp', document.getElementById('chFatResp'), {
+    type:'bar',
+    data:{ labels:frResps, datasets:frDatasets },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ right: 110 } },
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.x)}` } },
+        datalabels:{
+          display: ctx => ctx.datasetIndex === frLastIdx,
+          anchor:'end', align:'end', clamp:true, clip:false,
+          color:'#e6edf7', font:{ weight:'700', size:11 },
+          formatter: (v, ctx) => fmtBRL(frTotals[ctx.dataIndex])
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: frMax*1.18 },
+        y:{ stacked:true, grid:{display:false} }
+      }
+    }
+  });
+
+  /* ===== Gráfico 3: Evolução das Faturas por Cartão (todos os meses) ===== */
+  const allMonths  = [...new Set(STATE.parcelas.map(p => p.mesFaturaKey))].sort();
+  const allCartoes = [...new Set(STATE.parcelas.map(p => p.cartao))].sort();
+  const evMap = {};
+  for(const c of allCartoes){ evMap[c] = allMonths.map(_=>0); }
+  for(const p of STATE.parcelas){
+    const i = allMonths.indexOf(p.mesFaturaKey);
+    if(i>=0) evMap[p.cartao][i] += p.valorParcela;
+  }
+  const evDatasets = allCartoes.map((c,i) => ({
+    label:c, data: evMap[c].map(v=>Math.round(v*100)/100),
+    backgroundColor: colorFor(c,i), borderRadius:6, borderSkipped:false, maxBarThickness:60
+  }));
+  const evTotals = allMonths.map((_, idx) => allCartoes.reduce((s,c)=>s+(evMap[c][idx]||0), 0));
+  const evMax = Math.max(0, ...evTotals);
+  const evLastIdx = evDatasets.length - 1;
+  makeOrUpdate('chFatEvolCartao', document.getElementById('chFatEvolCartao'), {
+    type:'bar',
+    data:{ labels: allMonths.map(monthLabel), datasets: evDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 24 } },
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+        datalabels:{
+          display: ctx => ctx.datasetIndex === evLastIdx,
+          anchor:'end', align:'top', clamp:true, clip:false,
+          color:'#e6edf7', font:{ weight:'700', size:11 },
+          formatter: (v, ctx) => fmtBRL(evTotals[ctx.dataIndex])
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{display:false} },
+        y:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: evMax*1.15 }
+      }
+    }
+  });
+
+  /* ===== Gráfico 4: Total Mensal por Responsável (todos os meses) ===== */
+  const allResps = [...new Set(STATE.parcelas.map(p => p.resp))];
+  const respGrand = {};
+  for(const p of STATE.parcelas){ respGrand[p.resp] = (respGrand[p.resp]||0) + p.valorParcela; }
+  allResps.sort((a,b) => (respGrand[b]||0) - (respGrand[a]||0));
+  const rmMap = {};
+  for(const r of allResps){ rmMap[r] = allMonths.map(_=>0); }
+  for(const p of STATE.parcelas){
+    const i = allMonths.indexOf(p.mesFaturaKey);
+    if(i>=0) rmMap[p.resp][i] += p.valorParcela;
+  }
+  const rmDatasets = allResps.map((r,i) => ({
+    label:r, data: rmMap[r].map(v=>Math.round(v*100)/100),
+    backgroundColor: colorFor(r,i), borderRadius:6, borderSkipped:false, maxBarThickness:60
+  }));
+  const rmTotals = allMonths.map((_, idx) => allResps.reduce((s,r)=>s+(rmMap[r][idx]||0), 0));
+  const rmMax = Math.max(0, ...rmTotals);
+  const rmLastIdx = rmDatasets.length - 1;
+  makeOrUpdate('chFatEvolResp', document.getElementById('chFatEvolResp'), {
+    type:'bar',
+    data:{ labels: allMonths.map(monthLabel), datasets: rmDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 24 } },
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+        datalabels:{
+          display: ctx => ctx.datasetIndex === rmLastIdx,
+          anchor:'end', align:'top', clamp:true, clip:false,
+          color:'#e6edf7', font:{ weight:'700', size:11 },
+          formatter: (v, ctx) => fmtBRL(rmTotals[ctx.dataIndex])
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{display:false} },
+        y:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: rmMax*1.15 }
+      }
+    }
+  });
 }
 
 function tagClassFor(cartao){
@@ -1091,6 +1345,7 @@ function switchTab(tab) {
   document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
   // Re-renderiza gráficos da aba Romário ao abrir (canvas pode precisar de resize)
   if (tab === 'romario') { renderFixosRomario(); renderRendaKpis(); }
+  if (tab === 'faturas') { renderFaturas(); }
 }
 
 const RENDA_ROMARIO = 5000;
@@ -1347,10 +1602,15 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
   });
 });
 
+// Seletor de mês da aba Faturas
+const _ffMes = document.getElementById('ffMes');
+if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
+
 // Auto-reload a cada 5 min (opcional, mantém dashboard vivo em modo TV)
 setInterval(load, 5 * 60 * 1000);
 
 load();
+// v2 — aba Faturas
 </script>
 </body>
 </html>
