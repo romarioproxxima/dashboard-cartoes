@@ -181,6 +181,12 @@
     .fixos-kpis{grid-template-columns:1fr 1fr}
   }
 
+  /* Drill-down aba Faturas */
+  details.card-group > summary{list-style:none;cursor:pointer}
+  details.card-group > summary::-webkit-details-marker{display:none}
+  details.card-group > summary .chev{transition:transform .2s;flex:0 0 auto}
+  details.card-group[open] > summary .chev{transform:rotate(90deg)}
+
   /* Scrollbar */
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:transparent}
@@ -424,16 +430,21 @@
 
     <!-- GRÁFICOS -->
     <div class="grid">
-      <div class="card">
+      <div class="card full">
         <h3>Fatura por Cartão</h3>
         <div class="desc">Total da fatura de cada cartão no mês selecionado</div>
         <div class="chart-holder"><canvas id="chFatCartao"></canvas></div>
       </div>
 
-      <div class="card">
+      <div class="card full" style="min-height:auto">
         <h3>Fatura por Responsável</h3>
-        <div class="desc">Total do mês de cada responsável — empilhado por cartão</div>
-        <div class="chart-holder"><canvas id="chFatResp"></canvas></div>
+        <div class="desc">Total da fatura do mês por responsável — clique no nome para ver os cartões e clique no cartão para ver os lançamentos.</div>
+        <div class="parc-toolbar">
+          <button class="btn small" id="frExpandAll">Expandir todos</button>
+          <button class="btn small" id="frCollapseAll">Recolher todos</button>
+          <span class="pill small" id="frSummary">—</span>
+        </div>
+        <div id="fatRespList" class="parc-list"></div>
       </div>
 
       <div class="card full">
@@ -1097,43 +1108,8 @@ function renderFaturas(){
     }
   });
 
-  /* ===== Gráfico 2: Fatura por Responsável (mês, empilhado por cartão) ===== */
-  const frResps   = Object.keys(byRespMes).sort((a,b)=>byRespMes[b]-byRespMes[a]);
-  const frCartoes = fcLabels;
-  const frMap = {};
-  for(const r of frResps){ frMap[r] = {}; for(const c of frCartoes){ frMap[r][c] = 0; } }
-  for(const p of parcMes){ frMap[p.resp][p.cartao] += p.valorParcela; }
-  const frDatasets = frCartoes.map((c,i) => ({
-    label:c,
-    data: frResps.map(r => Math.round((frMap[r][c]||0)*100)/100),
-    backgroundColor: colorFor(c,i),
-    borderRadius:6, borderSkipped:false, maxBarThickness:30
-  }));
-  const frTotals = frResps.map(r => byRespMes[r]);
-  const frMax = Math.max(0, ...frTotals);
-  const frLastIdx = frDatasets.length - 1;
-  makeOrUpdate('chFatResp', document.getElementById('chFatResp'), {
-    type:'bar',
-    data:{ labels:frResps, datasets:frDatasets },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ right: 110 } },
-      plugins:{
-        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
-        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.x)}` } },
-        datalabels:{
-          display: ctx => ctx.datasetIndex === frLastIdx,
-          anchor:'end', align:'end', clamp:true, clip:false,
-          color:'#e6edf7', font:{ weight:'700', size:11 },
-          formatter: (v, ctx) => fmtBRL(frTotals[ctx.dataIndex])
-        }
-      },
-      scales:{
-        x:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: frMax*1.18 },
-        y:{ stacked:true, grid:{display:false} }
-      }
-    }
-  });
+  /* ===== Camadas: Responsável → Cartão → Lançamentos ===== */
+  renderFatRespList(parcMes, mesKey);
 
   /* ===== Gráfico 3: Evolução das Faturas por Cartão (todos os meses) ===== */
   const allMonths  = [...new Set(STATE.parcelas.map(p => p.mesFaturaKey))].sort();
@@ -1214,6 +1190,106 @@ function renderFaturas(){
       }
     }
   });
+}
+
+/* =========================================================
+   ABA FATURAS — drill-down Responsável → Cartão → Lançamentos
+   ========================================================= */
+function renderFatRespList(parcMes, mesKey){
+  const container = document.getElementById('fatRespList');
+  const summary = document.getElementById('frSummary');
+  if(!container) return;
+  if(!parcMes.length){
+    container.innerHTML = `<div class="empty-state">Sem parcelas na fatura de ${monthLabel(mesKey)}.</div>`;
+    if(summary) summary.textContent = '0 parcelas';
+    return;
+  }
+
+  // Agrupa: responsável → cartão → parcelas
+  const byResp = {};
+  for(const p of parcMes){
+    if(!byResp[p.resp]) byResp[p.resp] = { total:0, count:0, byCartao:{} };
+    const r = byResp[p.resp];
+    if(!r.byCartao[p.cartao]) r.byCartao[p.cartao] = { total:0, count:0, items:[] };
+    r.byCartao[p.cartao].total += p.valorParcela;
+    r.byCartao[p.cartao].count++;
+    r.byCartao[p.cartao].items.push(p);
+    r.total += p.valorParcela;
+    r.count++;
+  }
+  const respsSorted = Object.entries(byResp).sort((a,b)=>b[1].total-a[1].total);
+  const totGeral = parcMes.reduce((s,p)=>s+p.valorParcela,0);
+  if(summary) summary.textContent = `${respsSorted.length} pessoas · ${parcMes.length} parcelas · ${fmtBRL(totGeral)}`;
+
+  container.innerHTML = respsSorted.map(([resp, data], idx) => {
+    const cartoes = Object.entries(data.byCartao).sort((a,b)=>b[1].total-a[1].total);
+
+    // Camada 2: cartões (cada um expande para os lançamentos)
+    const cartoesHtml = cartoes.map(([cartao, c]) => {
+      const tagCls = tagClassFor(cartao);
+      const items = c.items.slice().sort((a,b)=> b.valorParcela - a.valorParcela);
+      // Camada 3: lançamentos
+      const rows = items.map(p => {
+        const compraTxt = (p.compra || '(sem descrição)').toString();
+        const lojaTxt = p.loja ? `<div class="loja-sub">${p.loja}</div>` : '';
+        const dataCompraFmt = p.data ? p.data.toLocaleDateString('pt-BR') : '—';
+        const stTag = p.paga
+          ? '<span class="parc-num paid">Pago</span>'
+          : '<span class="parc-num current">Aberto</span>';
+        return `<tr>
+          <td><div style="font-weight:600">${compraTxt}</div>${lojaTxt}</td>
+          <td style="color:var(--muted);white-space:nowrap;font-size:11.5px">${dataCompraFmt}</td>
+          <td style="white-space:nowrap"><span class="parc-num" title="${p.n}ª de ${p.total} parcelas">${ordinal(p.n)}/${p.total}</span></td>
+          <td style="white-space:nowrap">${stTag}</td>
+          <td class="num" style="white-space:nowrap;font-weight:700">${fmtBRL(p.valorParcela)}</td>
+        </tr>`;
+      }).join('');
+      return `
+        <details class="card-group">
+          <summary class="card-hdr">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+              <span class="tag ${tagCls}">${cartao}</span>
+              <span style="color:var(--muted)">${c.count} lançamento${c.count>1?'s':''}</span>
+            </div>
+            <div class="ct-total">${fmtBRL(c.total)}</div>
+          </summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Compra</th>
+                <th style="width:95px">Comprado em</th>
+                <th style="width:80px">Parcela</th>
+                <th style="width:80px">Status</th>
+                <th class="num" style="width:110px">Valor</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </details>`;
+    }).join('');
+
+    // Camada 1: responsável
+    return `
+      <details class="person" ${idx === 0 ? 'open' : ''}>
+        <summary>
+          <div class="person-title">
+            <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+            <div class="avatar">${initials(resp)}</div>
+            <div>
+              <div>${resp}</div>
+              <div class="person-sub">${cartoes.length} cart${cartoes.length>1?'ões':'ão'} · ${data.count} lançamento${data.count>1?'s':''} · fatura ${monthLabel(mesKey)}</div>
+            </div>
+          </div>
+          <div class="person-meta">
+            <div class="person-total">${fmtBRL(data.total)}</div>
+          </div>
+        </summary>
+        <div class="person-body">
+          ${cartoesHtml}
+        </div>
+      </details>`;
+  }).join('');
 }
 
 function tagClassFor(cartao){
@@ -1605,6 +1681,10 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
 // Seletor de mês da aba Faturas
 const _ffMes = document.getElementById('ffMes');
 if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
+const _frExp = document.getElementById('frExpandAll');
+const _frCol = document.getElementById('frCollapseAll');
+if(_frExp) _frExp.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = true));
+if(_frCol) _frCol.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = false));
 
 // Auto-reload a cada 5 min (opcional, mantém dashboard vivo em modo TV)
 setInterval(load, 5 * 60 * 1000);
