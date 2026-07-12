@@ -442,6 +442,11 @@
         <div class="parc-toolbar">
           <button class="btn small" id="frExpandAll">Expandir todos</button>
           <button class="btn small" id="frCollapseAll">Recolher todos</button>
+          <select id="frStatus" style="background:var(--bg-soft);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;font-family:inherit;outline:none;cursor:pointer">
+            <option value="all">Todos os status</option>
+            <option value="aberto">🟡 Em aberto</option>
+            <option value="pago">🟢 Pago</option>
+          </select>
           <span class="pill small" id="frSummary">—</span>
         </div>
         <div id="fatRespList" class="parc-list"></div>
@@ -1036,6 +1041,7 @@ function render(){
    ABA FATURAS — totais por FATURA (parcelas de cada mês)
    ========================================================= */
 let FAT_MES = null;
+let FAT_STATUS = 'all';
 
 function populateFatMes(){
   const el = document.getElementById('ffMes');
@@ -1199,8 +1205,12 @@ function renderFatRespList(parcMes, mesKey){
   const container = document.getElementById('fatRespList');
   const summary = document.getElementById('frSummary');
   if(!container) return;
+  // Filtro por status (Todos / Em aberto / Pago)
+  if(FAT_STATUS === 'aberto')    parcMes = parcMes.filter(p => !p.paga);
+  else if(FAT_STATUS === 'pago') parcMes = parcMes.filter(p =>  p.paga);
   if(!parcMes.length){
-    container.innerHTML = `<div class="empty-state">Sem parcelas na fatura de ${monthLabel(mesKey)}.</div>`;
+    const stTxt = FAT_STATUS === 'aberto' ? 'em aberto' : FAT_STATUS === 'pago' ? 'pagas' : '';
+    container.innerHTML = `<div class="empty-state">Sem parcelas ${stTxt} na fatura de ${monthLabel(mesKey)}. 🎉</div>`;
     if(summary) summary.textContent = '0 parcelas';
     return;
   }
@@ -1681,6 +1691,8 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
 // Seletor de mês da aba Faturas
 const _ffMes = document.getElementById('ffMes');
 if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
+const _frStatus = document.getElementById('frStatus');
+if(_frStatus) _frStatus.addEventListener('change', e => { FAT_STATUS = e.target.value; renderFaturas(); });
 const _frExp = document.getElementById('frExpandAll');
 const _frCol = document.getElementById('frCollapseAll');
 if(_frExp) _frExp.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = true));
