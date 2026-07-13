@@ -521,8 +521,18 @@ const DESP_N_MONTHS    = 14;   // MÍNIMO garantido; o nº real de meses é dete
 // A 1ª linha de dados é a linha 4 (row 3 zero-based).
 const DESP_DATA_START  = 3;
 
-// Fechamento estimado: dias ANTES do vencimento em que o cartão fecha a fatura
-const CLOSING_OFFSET = 7;
+// Fechamento: dias ANTES do vencimento em que cada cartão fecha a fatura
+// (mesma tabela usada no Apps Script da planilha). Chave normalizada:
+// minúsculas e sem espaços ("Cred Card" → "credcard").
+const CLOSING_OFFSET_BY_CARD = {
+  'pan': 5, 'credcard': 7, 'santander': 6, 'neon': 5, 'inter': 7,
+  'caixa': 7, 'picpay': 8, 'nubank': 7, 'magalu': 5
+};
+const CLOSING_OFFSET = 7; // padrão para cartão não cadastrado
+const closingOffsetFor = c => {
+  const k = String(c||'').trim().toLowerCase().replace(/\s+/g,'');
+  return CLOSING_OFFSET_BY_CARD[k] !== undefined ? CLOSING_OFFSET_BY_CARD[k] : CLOSING_OFFSET;
+};
 
 /* =========================================================
    UTILITÁRIOS
@@ -672,7 +682,9 @@ function explodeParcelas(rows){
     // (data da compra + offset de fechamento) só pra não sumir da visão.
     if(!r.parcelas || !r.parcelas.length){
       const valorP = Math.round((r.valor / r.parc) * 100) / 100;
-      const offsetInicial = (r.data.getDate() < (r.venc - CLOSING_OFFSET)) ? 0 : 1;
+      // Compra ATÉ o dia do fechamento -> mesmo mês; depois -> mês seguinte
+      // (mesma regra do Apps Script, com fechamento específico por cartão)
+      const offsetInicial = (r.data.getDate() <= (r.venc - closingOffsetFor(r.cartao))) ? 0 : 1;
       for(let p = 0; p < r.parc; p++){
         const m = new Date(r.data.getFullYear(), r.data.getMonth()+offsetInicial+p, r.venc);
         out.push({...r, n:p+1, total:r.parc, valorParcela:valorP, status:'', paga:false, mesFatura:m, mesFaturaKey:monthKey(m)});
@@ -1689,17 +1701,4 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
   document.querySelectorAll('#parcDetalhe details.person').forEach(d => d.open = false);
 });
 ['fPeriodo','fCartao','fResp','fVenc','fMes','fModo'].forEach(id => {
-  document.getElementById(id).addEventListener('change', e => {
-    STATE.filters[id.slice(1).toLowerCase()] = e.target.value;
-    // mapping: fPeriodo->periodo, fCartao->cartao, fResp->resp, fVenc->venc, fMes->mes, fModo->modo
-    const map = {fPeriodo:'periodo', fCartao:'cartao', fResp:'resp', fVenc:'venc', fMes:'mes', fModo:'modo'};
-    STATE.filters[map[id]] = e.target.value;
-    render();
-  });
-});
-
-// Seletor de mês da aba Faturas
-const _ffMes = document.getElementById('ffMes');
-if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
-const _frStatus = document.getElementById('frStatus');
-if(_frStatus) _frStatus.addEventListener('change', e => { FAT_STATUS = e.target.value; renderFatu
+  document.getElementById(id).addEventListener('change'
