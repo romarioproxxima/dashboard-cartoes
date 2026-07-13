@@ -516,8 +516,9 @@ const DESP_COL = {
 // Primeiro mês coberto pelas colunas de parcela:
 const DESP_START_YEAR  = 2025;
 const DESP_START_MONTH = 10;   // 0-indexed → Novembro
-const DESP_N_MONTHS    = 14;   // Nov/2025 → Dez/2026
-// A planilha cobre 14 meses; a 1ª linha de dados é a linha 4 (row 3 zero-based).
+const DESP_N_MONTHS    = 14;   // MÍNIMO garantido; o nº real de meses é detectado
+                               // automaticamente pela quantidade de colunas da planilha
+// A 1ª linha de dados é a linha 4 (row 3 zero-based).
 const DESP_DATA_START  = 3;
 
 // Fechamento estimado: dias ANTES do vencimento em que o cartão fecha a fatura
@@ -605,6 +606,15 @@ function normalizeHeader(s){
 function rowsFromTable(table){
   const rows = table.rows || [];
   const out = [];
+
+  // Detecta automaticamente quantos meses a planilha cobre, contando as colunas
+  // retornadas pelo gviz (pares Parcela/Status a partir da coluna J). Assim, quando
+  // o Apps Script criar colunas de meses novos (2028+), o dashboard acompanha sozinho.
+  const numColsTabela = Math.max(
+    (table.cols || []).length,
+    ...rows.map(r => (r.c || []).length)
+  );
+  const nMeses = Math.max(DESP_N_MONTHS, Math.floor((numColsTabela - DESP_COL.firstParcCol) / 2));
   for(let r = DESP_DATA_START; r < rows.length; r++){
     const c = (rows[r].c || []);
     const cell = i => c[i] ? (c[i].v !== undefined ? c[i].v : null) : null;
@@ -622,7 +632,7 @@ function rowsFromTable(table){
     // Lê a matriz de parcelas por mês
     const valorFallback = Math.round((valor / parc) * 100) / 100;
     const parcelas = [];
-    for(let k = 0; k < DESP_N_MONTHS; k++){
+    for(let k = 0; k < nMeses; k++){
       const cValor  = DESP_COL.firstParcCol + 2*k;
       const cStatus = cValor + 1;
       const vNum    = Number(cell(cValor));
@@ -1692,17 +1702,4 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
 const _ffMes = document.getElementById('ffMes');
 if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
 const _frStatus = document.getElementById('frStatus');
-if(_frStatus) _frStatus.addEventListener('change', e => { FAT_STATUS = e.target.value; renderFaturas(); });
-const _frExp = document.getElementById('frExpandAll');
-const _frCol = document.getElementById('frCollapseAll');
-if(_frExp) _frExp.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = true));
-if(_frCol) _frCol.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = false));
-
-// Auto-reload a cada 5 min (opcional, mantém dashboard vivo em modo TV)
-setInterval(load, 5 * 60 * 1000);
-
-load();
-// v2 — aba Faturas
-</script>
-</body>
-</html>
+if(_frStatus) _frStatus.addEventListener('change', e => { FAT_STATUS = e.target.value; renderFatu
