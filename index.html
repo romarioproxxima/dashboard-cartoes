@@ -438,7 +438,7 @@
     <div class="grid">
       <div class="card full">
         <h3>Fatura por Cartão</h3>
-        <div class="desc">Total da fatura de cada cartão no mês selecionado</div>
+        <div class="desc">Fatura de cada cartão no mês — verde é o que já foi pago, colorido é o que falta</div>
         <div class="chart-holder"><canvas id="chFatCartao"></canvas></div>
       </div>
 
@@ -1120,28 +1120,37 @@ function renderFaturas(){
   const ffInfo = document.getElementById('ffInfo');
   if(ffInfo) ffInfo.textContent = `Fatura de ${monthLabel(mesKey)} · ${Object.keys(byCartaoMes).length} cartões · ${Object.keys(byRespMes).length} responsáveis`;
 
-  /* ===== Gráfico 1: Fatura por Cartão (mês selecionado) ===== */
+  /* ===== Gráfico 1: Fatura por Cartão (mês selecionado) — Pago x Em aberto ===== */
+  const byCartaoPagoMes = {};
+  for(const p of parcMes){ if(p.paga) byCartaoPagoMes[p.cartao] = (byCartaoPagoMes[p.cartao]||0) + p.valorParcela; }
   const fcLabels = Object.keys(byCartaoMes).sort((a,b)=>byCartaoMes[b]-byCartaoMes[a]);
   const fcData   = fcLabels.map(k => Math.round(byCartaoMes[k]*100)/100);
+  const fcPago   = fcLabels.map(k => Math.round((byCartaoPagoMes[k]||0)*100)/100);
+  const fcAberto = fcLabels.map((k,i) => Math.max(0, Math.round((fcData[i] - fcPago[i])*100)/100));
+  const fcPct    = fcLabels.map((k,i) => fcData[i] > 0 ? Math.round((fcPago[i]/fcData[i])*100) : 0);
   const fcMax    = Math.max(0, ...fcData);
   makeOrUpdate('chFatCartao', document.getElementById('chFatCartao'), {
     type:'bar',
-    data:{ labels:fcLabels, datasets:[{ label:'Fatura', data:fcData, backgroundColor:fcLabels.map(c=>colorFor(c)), borderRadius:8, borderSkipped:false, maxBarThickness:48 }] },
+    data:{ labels:fcLabels, datasets:[
+      { label:'Pago',      data:fcPago,   backgroundColor:'#22c55e', borderRadius:8, borderSkipped:false, maxBarThickness:48 },
+      { label:'Em aberto', data:fcAberto, backgroundColor:fcLabels.map(c=>colorFor(c)), borderRadius:8, borderSkipped:false, maxBarThickness:48 }
+    ]},
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ right: 90 } },
+      layout:{ padding:{ right: 150 } },
       plugins:{
-        legend:{display:false},
-        tooltip:{ callbacks:{ label:ctx => fmtBRL(ctx.parsed.x) } },
+        legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, padding:12}},
+        tooltip:{ callbacks:{ label:ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.x)}` } },
         datalabels:{
-          display:true, anchor:'end', align:'end', clamp:true, clip:false,
+          display: ctx => ctx.datasetIndex === 1,
+          anchor:'end', align:'end', clamp:true, clip:false,
           color:'#e6edf7', font:{ weight:'600', size:11 },
-          formatter:v => fmtBRL(v)
+          formatter:(v, ctx) => `${fmtBRL(fcData[ctx.dataIndex])} · ${fcPct[ctx.dataIndex]}% pago`
         }
       },
       scales:{
-        x:{ grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: fcMax*1.15 },
-        y:{ grid:{display:false} }
+        x:{ stacked:true, grid:gridStyle, ticks:{ callback:v=>fmtBRL(v).replace('R$ ','R$ ') }, suggestedMax: fcMax*1.15 },
+        y:{ stacked:true, grid:{display:false} }
       }
     }
   });
