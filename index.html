@@ -192,6 +192,12 @@
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:#223257;border-radius:10px}
   ::-webkit-scrollbar-thumb:hover{background:#2d4171}
+/* Pago x Falta (Fatura por Responsável) */
+.pgbar{width:160px;height:6px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden;margin-top:4px;margin-left:auto}
+.pgbar-fill{height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:99px;transition:width .3s}
+.pgbar-meta{font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.pgbar-meta b.pg{color:#4ade80;font-weight:700}
+.pgbar-meta b.ab{color:#fbbf24;font-weight:700}
 </style>
 </head>
 <body>
@@ -446,6 +452,9 @@
             <option value="all">Todos os status</option>
             <option value="aberto">🟡 Em aberto</option>
             <option value="pago">🟢 Pago</option>
+          </select>
+          <select id="frCartao" style="background:var(--bg-soft);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;font-family:inherit;outline:none;cursor:pointer">
+            <option value="all">Todos os cartões</option>
           </select>
           <span class="pill small" id="frSummary">—</span>
         </div>
@@ -1064,6 +1073,7 @@ function render(){
    ========================================================= */
 let FAT_MES = null;
 let FAT_STATUS = 'all';
+let FAT_CARTAO = 'all';
 
 function populateFatMes(){
   const el = document.getElementById('ffMes');
@@ -1227,6 +1237,29 @@ function renderFatRespList(parcMes, mesKey){
   const container = document.getElementById('fatRespList');
   const summary = document.getElementById('frSummary');
   if(!container) return;
+
+  // ===== Filtro por cartão =====
+  const selCartao = document.getElementById('frCartao');
+  if(selCartao){
+    const cartoesMes = [...new Set(parcMes.map(p => p.cartao))].sort();
+    const optsHtml = '<option value="all">Todos os cartões</option>' + cartoesMes.map(c=>`<option value="${c}">${c}</option>`).join('');
+    if(selCartao.dataset.opts !== optsHtml){ selCartao.innerHTML = optsHtml; selCartao.dataset.opts = optsHtml; }
+    if(FAT_CARTAO !== 'all' && !cartoesMes.includes(FAT_CARTAO)) FAT_CARTAO = 'all';
+    selCartao.value = FAT_CARTAO;
+  }
+  if(FAT_CARTAO !== 'all') parcMes = parcMes.filter(p => p.cartao === FAT_CARTAO);
+
+  // ===== Pago x Falta por responsável+cartão =====
+  // Calculado ANTES do filtro de status, para a barrinha refletir o progresso
+  // real da fatura mesmo quando a lista está filtrada por Em aberto/Pago.
+  const pagoMap = {};
+  for(const p of parcMes){
+    const k = p.resp + '||' + p.cartao;
+    if(!pagoMap[k]) pagoMap[k] = { pago:0, total:0 };
+    pagoMap[k].total += p.valorParcela;
+    if(p.paga) pagoMap[k].pago += p.valorParcela;
+  }
+
   // Filtro por status (Todos / Em aberto / Pago)
   if(FAT_STATUS === 'aberto')    parcMes = parcMes.filter(p => !p.paga);
   else if(FAT_STATUS === 'pago') parcMes = parcMes.filter(p =>  p.paga);
@@ -1284,7 +1317,16 @@ function renderFatRespList(parcMes, mesKey){
               <span class="tag ${tagCls}">${cartao}</span>
               <span style="color:var(--muted)">${c.count} lançamento${c.count>1?'s':''}</span>
             </div>
-            <div class="ct-total">${fmtBRL(c.total)}</div>
+            <div style="text-align:right">
+              ${(() => {
+                const pm = pagoMap[resp + '||' + cartao] || { pago:0, total:c.total };
+                const falta = Math.max(0, pm.total - pm.pago);
+                const pct = pm.total > 0 ? Math.round((pm.pago / pm.total) * 100) : 0;
+                return `<div class="ct-total">${fmtBRL(pm.total)}</div>
+                <div class="pgbar-meta">Pago <b class="pg">${fmtBRL(pm.pago)}</b> · Falta <b class="ab">${fmtBRL(falta)}</b> · ${pct}%</div>
+                <div class="pgbar"><div class="pgbar-fill" style="width:${pct}%"></div></div>`;
+              })()}
+            </div>
           </summary>
           <table>
             <thead>
@@ -1701,4 +1743,32 @@ if(_btnCol) _btnCol.addEventListener('click', () => {
   document.querySelectorAll('#parcDetalhe details.person').forEach(d => d.open = false);
 });
 ['fPeriodo','fCartao','fResp','fVenc','fMes','fModo'].forEach(id => {
-  document.getElementById(id).addEventListener('change'
+  document.getElementById(id).addEventListener('change', e => {
+    STATE.filters[id.slice(1).toLowerCase()] = e.target.value;
+    // mapping: fPeriodo->periodo, fCartao->cartao, fResp->resp, fVenc->venc, fMes->mes, fModo->modo
+    const map = {fPeriodo:'periodo', fCartao:'cartao', fResp:'resp', fVenc:'venc', fMes:'mes', fModo:'modo'};
+    STATE.filters[map[id]] = e.target.value;
+    render();
+  });
+});
+
+// Seletor de mês da aba Faturas
+const _ffMes = document.getElementById('ffMes');
+if(_ffMes) _ffMes.addEventListener('change', e => { FAT_MES = e.target.value; renderFaturas(); });
+const _frStatus = document.getElementById('frStatus');
+if(_frStatus) _frStatus.addEventListener('change', e => { FAT_STATUS = e.target.value; renderFaturas(); });
+const _frCartao = document.getElementById('frCartao');
+if(_frCartao) _frCartao.addEventListener('change', e => { FAT_CARTAO = e.target.value; renderFaturas(); });
+const _frExp = document.getElementById('frExpandAll');
+const _frCol = document.getElementById('frCollapseAll');
+if(_frExp) _frExp.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = true));
+if(_frCol) _frCol.addEventListener('click', () => document.querySelectorAll('#fatRespList details').forEach(d => d.open = false));
+
+// Auto-reload a cada 5 min (opcional, mantém dashboard vivo em modo TV)
+setInterval(load, 5 * 60 * 1000);
+
+load();
+// v2 — aba Faturas
+</script>
+</body>
+</html>
