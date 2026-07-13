@@ -1262,11 +1262,15 @@ function renderFatRespList(parcMes, mesKey){
   // Calculado ANTES do filtro de status, para a barrinha refletir o progresso
   // real da fatura mesmo quando a lista está filtrada por Em aberto/Pago.
   const pagoMap = {};
+  const pagoResp = {};
   for(const p of parcMes){
     const k = p.resp + '||' + p.cartao;
     if(!pagoMap[k]) pagoMap[k] = { pago:0, total:0 };
     pagoMap[k].total += p.valorParcela;
     if(p.paga) pagoMap[k].pago += p.valorParcela;
+    if(!pagoResp[p.resp]) pagoResp[p.resp] = { pago:0, total:0 };
+    pagoResp[p.resp].total += p.valorParcela;
+    if(p.paga) pagoResp[p.resp].pago += p.valorParcela;
   }
 
   // Filtro por status (Todos / Em aberto / Pago)
@@ -1364,8 +1368,15 @@ function renderFatRespList(parcMes, mesKey){
               <div class="person-sub">${cartoes.length} cart${cartoes.length>1?'ões':'ão'} · ${data.count} lançamento${data.count>1?'s':''} · fatura ${monthLabel(mesKey)}</div>
             </div>
           </div>
-          <div class="person-meta">
-            <div class="person-total">${fmtBRL(data.total)}</div>
+          <div class="person-meta" style="text-align:right">
+            ${(() => {
+              const pr = pagoResp[resp] || { pago:0, total:data.total };
+              const falta = Math.max(0, pr.total - pr.pago);
+              const pct = pr.total > 0 ? Math.round((pr.pago / pr.total) * 100) : 0;
+              return `<div class="person-total">${fmtBRL(pr.total)}</div>
+              <div class="pgbar-meta">Pago <b class="pg">${fmtBRL(pr.pago)}</b> · Falta <b class="ab">${fmtBRL(falta)}</b> · ${pct}%</div>
+              <div class="pgbar"><div class="pgbar-fill" style="width:${pct}%"></div></div>`;
+            })()}
           </div>
         </summary>
         <div class="person-body">
