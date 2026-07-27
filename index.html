@@ -1522,9 +1522,24 @@ function switchTab(tab) {
   if (tab === 'faturas') { renderFaturas(); }
 }
 
-let RENDA_ROMARIO = Number(localStorage.getItem('rendaRomario')) || 5000;
+const RENDA_PADRAO = 5000;
 
-/* Converte texto digitado (ex: "5.000", "5000", "4.752,04", "R$ 6 mil") em número */
+/* Renda guardada POR MÊS: { "2026-07": 5000, "2026-08": 6000 } */
+let RENDA_MAP = {};
+try { RENDA_MAP = JSON.parse(localStorage.getItem('rendaPorMes') || '{}') || {}; } catch(e){ RENDA_MAP = {}; }
+// migra o valor único antigo (versão anterior), se existir
+(function(){
+  const antigo = localStorage.getItem('rendaRomario');
+  if(antigo && Object.keys(RENDA_MAP).length === 0){
+    RENDA_MAP[monthKey(new Date())] = Number(antigo) || RENDA_PADRAO;
+  }
+})();
+
+function getRenda(mesKey){
+  return (mesKey in RENDA_MAP) ? RENDA_MAP[mesKey] : RENDA_PADRAO;
+}
+
+/* Converte texto digitado (ex: "5.000", "5000", "4.752,04") em número */
 function parseRenda(str){
   let s = String(str).replace(/[^\d,.-]/g,'').trim();
   if(!s) return 0;
@@ -1537,28 +1552,22 @@ function parseRenda(str){
   return isFinite(n) && n > 0 ? n : 0;
 }
 
-/* Aplica novo valor de renda, salva e recalcula os KPIs */
-function setRenda(valor){
-  RENDA_ROMARIO = valor > 0 ? valor : 0;
-  localStorage.setItem('rendaRomario', RENDA_ROMARIO);
-  const fmt = fmtBRL(RENDA_ROMARIO);
-  ['inRenda','inRendaP'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el && document.activeElement !== el) el.value = fmt;   // não sobrescreve o que está sendo digitado
-  });
+/* Salva a renda de UM mês específico e recalcula */
+function setRenda(mesKey, valor){
+  RENDA_MAP[mesKey] = valor > 0 ? valor : 0;
+  localStorage.setItem('rendaPorMes', JSON.stringify(RENDA_MAP));
   renderRendaKpis();
 }
 
-/* Liga os dois campos de renda (mês atual e próximo compartilham o mesmo valor) */
+/* Liga os dois campos — cada um edita só o mês associado (dataset.mes) */
 function initRendaInputs(){
   ['inRenda','inRendaP'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.dataset.wired) return;
     el.dataset.wired = '1';
-    el.value = fmtBRL(RENDA_ROMARIO);
-    el.addEventListener('focus', ()=>{ el.value = String(RENDA_ROMARIO).replace('.',','); el.select(); });
-    el.addEventListener('input', ()=>{ setRenda(parseRenda(el.value)); });
-    el.addEventListener('blur',  ()=>{ el.value = fmtBRL(RENDA_ROMARIO); });
+    el.addEventListener('focus', ()=>{ el.value = String(getRenda(el.dataset.mes)).replace('.',','); el.select(); });
+    el.addEventListener('input', ()=>{ if(el.dataset.mes) setRenda(el.dataset.mes, parseRenda(el.value)); });
+    el.addEventListener('blur',  ()=>{ el.value = fmtBRL(getRenda(el.dataset.mes)); });
     el.addEventListener('keydown', e=>{ if(e.key==='Enter') el.blur(); });
   });
 }
@@ -1574,18 +1583,25 @@ function renderRendaKpis() {
   document.getElementById('kRendaLabelAtual').textContent = `📅 ${monthLabel(keyAtual)} — Mês Atual`;
   document.getElementById('kRendaLabelProx').textContent  = `📅 ${monthLabel(keyProx)} — Próximo Mês`;
 
+  // associa cada input ao seu mês e mostra o valor (sem sobrescrever se estiver digitando)
+  const inA = document.getElementById('inRenda');
+  const inP = document.getElementById('inRendaP');
+  if(inA){ inA.dataset.mes = keyAtual; if(document.activeElement !== inA) inA.value = fmtBRL(getRenda(keyAtual)); }
+  if(inP){ inP.dataset.mes = keyProx;  if(document.activeElement !== inP) inP.value = fmtBRL(getRenda(keyProx)); }
+
   function calcMes(mesKey, ids) {
+    const renda = getRenda(mesKey);
     const parcMes = STATE.parcelas.filter(p =>
       p.mesFaturaKey === mesKey &&
       (p.resp.toLowerCase() === 'romário' || p.resp.toLowerCase() === 'romario')
     );
     const fatura = parcMes.reduce((s,p) => s+p.valorParcela, 0);
-    const saldo  = RENDA_ROMARIO - fatura;
-    const pct    = Math.round((fatura / RENDA_ROMARIO) * 100);
+    const saldo  = renda - fatura;
+    const pct    = renda > 0 ? Math.round((fatura / renda) * 100) : 0;
 
     const fatEl = document.getElementById(ids.fatura);
     fatEl.textContent = fmtBRL(fatura);
-    fatEl.style.color = fatura > RENDA_ROMARIO*0.5 ? '#f59e0b' : '';
+    fatEl.style.color = fatura > renda*0.5 ? '#f59e0b' : '';
     document.getElementById(ids.faturaHint).textContent = `${pct}% da renda`;
 
     const saldoEl = document.getElementById(ids.saldo);
