@@ -140,6 +140,9 @@
   .renda-kpis{margin-top:-6px;margin-bottom:20px;border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:14px;background:rgba(34,197,94,.04);box-shadow:var(--shadow)}
   .renda-kpis .kpi{background:var(--panel-2)}
   .renda-kpis .kpi.good::before{background:linear-gradient(180deg,#22c55e,#10b981)}
+  .renda-input{width:100%;background:transparent;border:1px solid transparent;border-radius:8px;font-weight:800;font-family:inherit;padding:1px 5px;margin:1px 0;outline:none;transition:border-color .15s,background .15s;cursor:text}
+  .renda-input:hover{border-color:rgba(34,197,94,.4)}
+  .renda-input:focus{border-color:#22c55e;background:rgba(34,197,94,.1)}
 
   /* ── Abas ── */
   .tabs-nav{display:flex;gap:4px;margin-bottom:20px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:5px}
@@ -327,7 +330,7 @@
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px" id="kRendaLabelAtual">—</div>
         <div class="kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:12px">
-          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><div class="val" style="color:#22c55e;font-size:20px">R$ 5.000</div><div class="hint">Base mensal</div></div>
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><input id="inRenda" class="renda-input" inputmode="decimal" style="color:#22c55e;font-size:20px" /><div class="hint">Base mensal · clique p/ editar</div></div>
           <div class="kpi" style="background:var(--panel-2)"><div class="lbl">Fatura</div><div class="val" id="kRendaFatura" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaFaturaHint">—</div></div>
           <div class="kpi good" style="background:var(--panel-2)"><div class="lbl">Saldo</div><div class="val" id="kRendaSaldo" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaSaldoHint">—</div></div>
           <div class="kpi info" style="background:var(--panel-2)"><div class="lbl">Comprometido</div><div class="val" id="kRendaPct" style="font-size:20px">0%</div><div class="hint" id="kRendaPctHint">—</div></div>
@@ -338,7 +341,7 @@
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px" id="kRendaLabelProx">—</div>
         <div class="kpis" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:12px">
-          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><div class="val" style="color:#22c55e;font-size:20px">R$ 5.000</div><div class="hint">Base mensal</div></div>
+          <div class="kpi" style="background:var(--panel-2)"><div class="lbl">💰 Renda</div><input id="inRendaP" class="renda-input" inputmode="decimal" style="color:#22c55e;font-size:20px" /><div class="hint">Base mensal · clique p/ editar</div></div>
           <div class="kpi" style="background:var(--panel-2)"><div class="lbl">Fatura</div><div class="val" id="kRendaFaturaP" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaFaturaHintP">—</div></div>
           <div class="kpi good" style="background:var(--panel-2)"><div class="lbl">Saldo</div><div class="val" id="kRendaSaldoP" style="font-size:20px">R$ 0,00</div><div class="hint" id="kRendaSaldoHintP">—</div></div>
           <div class="kpi info" style="background:var(--panel-2)"><div class="lbl">Comprometido</div><div class="val" id="kRendaPctP" style="font-size:20px">0%</div><div class="hint" id="kRendaPctHintP">—</div></div>
@@ -1062,6 +1065,7 @@ function render(){
 
   // ============ Custos Fixos do Romário ============
   renderFixosRomario();
+  initRendaInputs();
   renderRendaKpis();
 
   // ============ Aba Faturas ============
@@ -1514,11 +1518,50 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
   // Re-renderiza gráficos da aba Romário ao abrir (canvas pode precisar de resize)
-  if (tab === 'romario') { renderFixosRomario(); renderRendaKpis(); }
+  if (tab === 'romario') { renderFixosRomario(); initRendaInputs(); renderRendaKpis(); }
   if (tab === 'faturas') { renderFaturas(); }
 }
 
-const RENDA_ROMARIO = 5000;
+let RENDA_ROMARIO = Number(localStorage.getItem('rendaRomario')) || 5000;
+
+/* Converte texto digitado (ex: "5.000", "5000", "4.752,04", "R$ 6 mil") em número */
+function parseRenda(str){
+  let s = String(str).replace(/[^\d,.-]/g,'').trim();
+  if(!s) return 0;
+  if(s.includes(',')){            // formato BR: ponto = milhar, vírgula = decimal
+    s = s.replace(/\./g,'').replace(',', '.');
+  } else {                        // sem vírgula: pontos são separadores de milhar
+    s = s.replace(/\.(?=\d{3}(\D|$))/g,'');
+  }
+  const n = parseFloat(s);
+  return isFinite(n) && n > 0 ? n : 0;
+}
+
+/* Aplica novo valor de renda, salva e recalcula os KPIs */
+function setRenda(valor){
+  RENDA_ROMARIO = valor > 0 ? valor : 0;
+  localStorage.setItem('rendaRomario', RENDA_ROMARIO);
+  const fmt = fmtBRL(RENDA_ROMARIO);
+  ['inRenda','inRendaP'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && document.activeElement !== el) el.value = fmt;   // não sobrescreve o que está sendo digitado
+  });
+  renderRendaKpis();
+}
+
+/* Liga os dois campos de renda (mês atual e próximo compartilham o mesmo valor) */
+function initRendaInputs(){
+  ['inRenda','inRendaP'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || el.dataset.wired) return;
+    el.dataset.wired = '1';
+    el.value = fmtBRL(RENDA_ROMARIO);
+    el.addEventListener('focus', ()=>{ el.value = String(RENDA_ROMARIO).replace('.',','); el.select(); });
+    el.addEventListener('input', ()=>{ setRenda(parseRenda(el.value)); });
+    el.addEventListener('blur',  ()=>{ el.value = fmtBRL(RENDA_ROMARIO); });
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter') el.blur(); });
+  });
+}
 
 /* =========================================================
    RENDER: KPIs DE RENDA DO ROMÁRIO
